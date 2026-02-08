@@ -1,0 +1,330 @@
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StructIQ | Authority Command Center</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --accent-blue: #3b82f6;
+            --status-critical: #ef4444;
+            --status-warning: #f59e0b;
+            --status-ok: #10b981;
+            --border-light: rgba(255, 255, 255, 0.1);
+            --font-mono: 'IBM Plex Mono', monospace;
+        }
+
+        body { 
+            background-color: var(--bg-dark);
+            color: #f1f5f9;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .header-bar {
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--accent-blue);
+            padding: 1rem 2rem;
+        }
+
+        .glass-panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        #map { 
+            height: 500px; 
+            border-radius: 8px; 
+            filter: grayscale(0.5) invert(0.9) hue-rotate(180deg); 
+        }
+
+        .asset-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border-light);
+            transition: all 0.3s ease;
+            margin-bottom: 1rem;
+        }
+        .asset-card:hover { background: rgba(255,255,255,0.07); }
+
+        .progress { background-color: rgba(255,255,255,0.1); border-radius: 0; height: 6px; }
+        
+        .terminal-box {
+            background: #000;
+            font-family: var(--font-mono);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #334155;
+            font-size: 0.8rem;
+        }
+
+        .ticket-log {
+            border-bottom: 1px solid #1e293b;
+            padding: 5px 0;
+            color: #10b981;
+        }
+
+        .btn-blueprint {
+            background: transparent;
+            border: 1px solid var(--accent-blue);
+            color: var(--accent-blue);
+            font-family: var(--font-mono);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .btn-blueprint:hover { background: var(--accent-blue); color: white; }
+
+        @keyframes pulse-red {
+            0% { transform: scale(1); opacity: 0.9; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.9; }
+        }
+        .emergency-mode { animation: pulse-red 1s infinite; }
+    </style>
+</head>
+<body>
+
+<div class="header-bar d-flex justify-content-between align-items-center">
+    <div>
+        <h4 style="font-family: 'Space Grotesk'; font-weight: 700; margin: 0; color: var(--accent-blue);">
+            STRUCTIQ <span style="color: white; font-weight: 300;">| COMMAND CENTER</span>
+        </h4>
+        <p style="font-family: var(--font-mono); font-size: 0.7rem; margin: 0; color: #64748b;">
+            LOCATION: CHENNAI_GRID_ALPHA_2
+        </p>
+    </div>
+    <div class="d-flex gap-2">
+        <button onclick="triggerFlood()" class="btn btn-outline-danger btn-sm fw-bold">FORCE FLOOD SIMULATION</button>
+        <div class="badge bg-primary p-2 d-flex align-items-center" id="system-time">00:00:00</div>
+    </div>
+</div>
+
+<div class="container-fluid p-4">
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="glass-panel p-2 mb-4 map-container">
+                <div id="map"></div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="glass-panel p-3">
+                        <h6 class="fw-bold mb-3" style="font-family: 'Space Grotesk'; border-bottom: 1px solid var(--border-light); padding-bottom: 10px;">
+                            NEW ASSET REGISTRY
+                        </h6>
+                        <div class="row g-2">
+                            <div class="col-8"><input type="text" id="name" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="Bridge/Road Name"></div>
+                            <div class="col-4">
+                                <select id="type" class="form-select form-select-sm bg-dark text-white border-secondary">
+                                    <option value="Bridge">Bridge</option>
+                                    <option value="Road">Road</option>
+                                    <option value="Flyover">Flyover</option>
+                                </select>
+                            </div>
+                            <div class="col-6"><input type="number" id="year" class="form-control form-control-sm bg-dark text-white border-secondary" value="2020"></div>
+                            <div class="col-6"><button onclick="addAsset()" class="btn btn-blueprint btn-sm w-100">REGISTER</button></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="glass-panel p-3">
+                        <h6 class="fw-bold mb-3 text-success" style="font-family: 'Space Grotesk'; border-bottom: 1px solid var(--border-light); padding-bottom: 10px;">
+                            MAINTENANCE CLOSURE
+                        </h6>
+                        <div class="input-group input-group-sm">
+                            <input type="number" id="resolve-id" class="form-control bg-dark text-white border-secondary" placeholder="Report ID">
+                            <button class="btn btn-success" onclick="resolveReport()">VERIFY REPAIR</button>
+                        </div>
+                        <p class="mt-2 text-muted" style="font-size: 0.65rem;">Enter Report ID to restore health.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="fw-bold mb-0" style="font-family: 'Space Grotesk';">INFRASTRUCTURE FLEET</h6>
+                <span class="badge bg-secondary" id="asset-count">0</span>
+            </div>
+            <div id="asset-list" style="max-height: 400px; overflow-y: auto; margin-bottom: 2rem;"></div>
+
+            <div class="glass-panel p-3">
+                <h6 class="fw-bold text-info small mb-3">LIVE INCIDENT FEED (CITIZEN REPORTS)</h6>
+                <div id="incident-feed" class="terminal-box" style="height: 250px; overflow-y: auto;">
+                    <div class="text-muted">Awaiting uplink...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="vibeModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark border border-primary">
+            <div class="modal-header border-bottom border-secondary">
+                <h6 class="modal-title text-info fw-bold" id="vibeTitle">TELEMETRY_SCAN</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <canvas id="vibeChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+const API_URL = "http://127.0.0.1:8000";
+let map, markers = [], vibeChart = null;
+
+function initMap() {
+    const streetView = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
+    const satelliteView = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri'
+    });
+
+    map = L.map('map', { 
+        center: [13.0827, 80.2707], 
+        zoom: 12,
+        layers: [satelliteView] 
+    });
+
+    const baseMaps = { "Satellite View": satelliteView, "Street View": streetView };
+    L.control.layers(baseMaps).addTo(map);
+}
+
+async function loadAssets() {
+    try {
+        const res = await fetch(`${API_URL}/assets`);
+        const assets = await res.json();
+        document.getElementById('asset-count').innerText = assets.length;
+        const listDiv = document.getElementById('asset-list');
+        listDiv.innerHTML = '';
+        
+        markers.forEach(m => map.removeLayer(m));
+        markers = [];
+
+        assets.forEach((a) => {
+            let statusColor = '#3b82f6'; 
+            if (a.health_score < 40) statusColor = '#ef4444'; 
+            else if (a.health_score < 75) statusColor = '#f59e0b'; 
+
+            listDiv.innerHTML += `
+                <div class="asset-card p-3 rounded mb-2" style="border-left: 6px solid ${statusColor}">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="fw-bold small text-info" onclick="showGraph('${a.name}')" style="cursor:pointer; text-decoration: underline;">${a.name}</span>
+                        <span class="badge bg-dark border border-secondary" style="font-size:0.6rem;">${a.asset_type}</span>
+                    </div>
+                    <div class="progress mb-2">
+                        <div class="progress-bar" style="width: ${a.health_score}%; background-color: ${statusColor}"></div>
+                    </div>
+                    <div class="d-flex justify-content-between opacity-75 mb-2" style="font-size:0.7rem; font-family: var(--font-mono);">
+                        <span>HEALTH: ${a.health_score.toFixed(1)}%</span>
+                        <span>ID: #${a.id}</span>
+                    </div>
+                    <button onclick="repairAsset(${a.id})" class="btn btn-sm btn-outline-success w-100 py-0" style="font-size: 10px;">INITIATE REPAIR</button>
+                </div>`;
+            
+            const m = L.circleMarker([a.latitude, a.longitude], {
+                radius: 10, color: 'white', weight: 2, fillColor: statusColor, fillOpacity: 0.9
+            }).addTo(map).bindPopup(`<b>${a.name}</b><br>Health: ${a.health_score.toFixed(1)}%`);
+            
+            if (a.health_score < 40) { m.getElement()?.classList.add('emergency-mode'); }
+            markers.push(m);
+        });
+    } catch(e) { console.error("Asset Load Error", e); }
+}
+
+async function repairAsset(assetId) {
+    await fetch(`${API_URL}/assets/${assetId}/maintenance`, { method: 'POST' });
+    loadAssets();
+}
+
+async function fetchIncidents() {
+    try {
+        const res = await fetch(`${API_URL}/reports`);
+        const reports = await res.json();
+        const feed = document.getElementById('incident-feed');
+        if (reports.length > 0) {
+            feed.innerHTML = '';
+            reports.reverse().slice(0, 8).forEach(rep => {
+                feed.innerHTML += `
+                    <div class="ticket-log">
+                        [${new Date().toLocaleTimeString()}] REPORT #${rep.id}<br>
+                        > ASSET: ${rep.asset_id} | SEV: ${rep.severity}<br>
+                        > ${rep.description}<br>
+                    </div>`;
+            });
+        }
+    } catch(e) { }
+}
+
+function showGraph(name) {
+    document.getElementById('vibeTitle').innerText = `TELEMETRY_SCAN: ${name}`;
+    const ctx = document.getElementById('vibeChart').getContext('2d');
+    if(vibeChart) vibeChart.destroy();
+    
+    vibeChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['-10s', '-8s', '-6s', '-4s', '-2s', 'Now'],
+            datasets: [{ 
+                label: 'Vibration (Hz)', 
+                data: Array.from({length: 6}, () => (Math.random() * 0.08).toFixed(3)),
+                borderColor: '#3b82f6', tension: 0.4, fill: true, backgroundColor: 'rgba(59, 130, 246, 0.1)'
+            }]
+        },
+        options: { scales: { y: { beginAtZero: true } } }
+    });
+    const myModal = new bootstrap.Modal(document.getElementById('vibeModal'));
+    myModal.show();
+}
+
+async function addAsset() {
+    const name = document.getElementById('name').value;
+    const year = document.getElementById('year').value;
+    const type = document.getElementById('type').value;
+    await fetch(`${API_URL}/assets`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({name, construction_year: parseInt(year), asset_type: type, latitude: 13.08, longitude: 80.27})
+    });
+    loadAssets();
+}
+
+async function triggerFlood() {
+    await fetch(`${API_URL}/weather/trigger-flood`, { method: 'POST' });
+    loadAssets();
+}
+
+async function resolveReport() {
+    const rid = document.getElementById('resolve-id').value;
+    await fetch(`${API_URL}/reports/${rid}/resolve`, {method: 'POST'});
+    loadAssets();
+    fetchIncidents();
+}
+
+window.onload = () => { 
+    initMap(); 
+    loadAssets(); 
+    fetchIncidents(); 
+    setInterval(loadAssets, 5000);
+    setInterval(fetchIncidents, 5000);
+    setInterval(() => {
+        document.getElementById('system-time').innerText = new Date().toLocaleTimeString();
+    }, 1000);
+};
+</script>

@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#1a1a1a">
+    
+    <!-- SEO & Metatags -->
+    <title>StructIQ | Predictive Infrastructure Health Monitoring</title>
+    <meta name="description" content="StructIQ is an AI-driven platform for predictive infrastructure monitoring. We help cities move from reactive repairs to predictive prevention.">
+    
+    <!-- Fonts: Space Grotesk (Structural), IBM Plex Mono (Technical) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@300;400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- CSS VARIABLES & THEME --- */
+        :root {
+            /* Theme Base (Blueprint / Paper) */
+            --bg-body: #f0f0f0;
+            --bg-surface: #ffffff;
+            --bg-surface-hover: #f9fafb;
+            --border-light: #d4d4d4;
+            --grid-line: #e5e5e5;
+            
+            --text-primary: #171717;
+            --text-secondary: #525252;
+            
+            /* Brand */
+            --accent-primary: #ff4d00; /* Construction Orange */
+            --accent-glow: rgba(255, 77, 0, 0.4);
+            --accent-secondary: #2563eb; /* Blueprint Blue */
+            
+            /* Status */
+            --status-safe: #059669;
+            --status-monitor: #d97706;
+            --status-critical: #dc2626;
+
+            /* Config */
+            --radius-md: 4px;
+            --radius-lg: 8px;
+            --container: 1240px;
+            --font-main: 'Inter', sans-serif;
+            --font-display: 'Space Grotesk', sans-serif;
+            --font-mono: 'IBM Plex Mono', monospace;
+        }
+
+        html.dark {
+            /* Dark Mode (CAD Interface) */
+            --bg-body: #0a0a0a;
+            --bg-surface: #141414;
+            --bg-surface-hover: #1f1f1f;
+            --border-light: #333333;
+            --grid-line: #1f1f1f;
+            
+            --text-primary: #e5e5e5;
+            --text-secondary: #a3a3a3;
+            --accent-primary: #ff5e1a;
+            --accent-glow: rgba(255, 94, 26, 0.3);
+        }
+
+        /* --- RESET & UTILITIES --- */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: background 0.3s ease, color 0.3s ease;
+            overflow-x: hidden;
+            
+            /* CAD GRID PATTERN */
+            background-image: 
+                linear-gradient(var(--grid-line) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+            background-size: 40px 40px;
+            background-position: center top;
+        }
+
+        h1, h2, h3, h4, h5 { font-family: var(--font-display); line-height: 1.1; letter-spacing: -0.03em; text-transform: uppercase; }
+        a { text-decoration: none; color: inherit; transition: 0.2s; }
+        
+        .container { max-width: var(--container); margin: 0 auto; padding: 0 24px; width: 100%; position: relative; z-index: 2; }
+        .text-center { text-align: center; }
+        .section { padding: 120px 0; position: relative; overflow: hidden; }
+        .font-mono { font-family: var(--font-mono); }
+
+        /* --- TEXTURED ORBS --- */
+        .orb-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            pointer-events: none; overflow: hidden; z-index: 1; perspective: 1000px;
+        }
+
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            background: 
+                radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.05), transparent 50%),
+                repeating-radial-gradient(
+                    circle at 50% 50%, 
+                    rgba(255, 255, 255, 0) 0px, 
+                    rgba(255, 255, 255, 0) 2px, 
+                    rgba(255, 255, 255, 0.1) 3px, 
+                    rgba(255, 255, 255, 0) 4px
+                );
+            box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.02), 0 0 30px var(--accent-glow);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(2px);
+            opacity: 0.6; 
+            animation: floatOrb 20s infinite ease-in-out alternate;
+        }
+
+        .orb.accent {
+            background: 
+                radial-gradient(circle at 30% 30%, rgba(37, 99, 235, 0.1), transparent 60%),
+                repeating-radial-gradient(
+                    circle at 50% 50%, 
+                    transparent 0px, transparent 3px, rgba(37, 99, 235, 0.2) 4px, transparent 5px
+                );
+            border-color: rgba(37, 99, 235, 0.3);
+            box-shadow: 0 0 40px rgba(37, 99, 235, 0.2);
+        }
+
+        .orb.orange {
+            background: 
+                radial-gradient(circle at 30% 30%, rgba(255, 77, 0, 0.1), transparent 60%),
+                repeating-radial-gradient(
+                    circle at 50% 50%, 
+                    transparent 0px, transparent 3px, rgba(255, 77, 0, 0.2) 4px, transparent 5px
+                );
+            border-color: rgba(255, 77, 0, 0.3);
+            box-shadow: 0 0 40px rgba(255, 77, 0, 0.2);
+        }
+
+        @keyframes floatOrb {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            100% { transform: translate(30px, -40px) rotate(15deg); }
+        }
+
+        /* --- PARALLAX BLUEPRINT CITY --- */
+        .blueprint-city {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 60vh; /* Covers lower part of section */
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+            mask-image: linear-gradient(to top, black 50%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to top, black 50%, transparent 100%);
+        }
+
+        .city-layer {
+            position: absolute;
+            bottom: 0;
+            left: -10%; /* Start slightly off screen */
+            width: 150%; /* Allow horizontal movement */
+            height: 100%;
+            display: flex;
+            align-items: flex-end;
+            will-change: transform;
+        }
+
+        .city-layer svg {
+            width: 100%;
+            height: auto;
+            vector-effect: non-scaling-stroke;
+        }
+
+        /* Layer Specifics */
+        .layer-mountains {
+            z-index: 1;
+            opacity: 0.2;
+            color: var(--text-secondary);
+        }
+        
+        .layer-buildings {
+            z-index: 2;
+            opacity: 0.4;
+            color: var(--accent-secondary);
+            bottom: -20px;
+        }
+
+        .layer-bridges {
+            z-index: 3;
+            opacity: 0.8;
+            color: var(--accent-primary);
+            bottom: -50px;
+        }
+
+        /* --- MINIMAL HEADER --- */
+        .navbar { position: fixed; top: 0; width: 100%; z-index: 1000; padding: 32px 0; pointer-events: none; }
+        .nav-content { display: flex; justify-content: space-between; align-items: center; pointer-events: auto; }
+        .logo-circle {
+            width: 48px; height: 48px; background: var(--text-primary); color: var(--bg-body);
+            border-radius: 50%; display: grid; place-items: center;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.2); transition: transform 0.2s;
+        }
+        .logo-circle:hover { transform: translateY(-2px); }
+        .nav-actions { display: flex; align-items: center; gap: 16px; }
+        .btn-circle {
+            width: 48px; height: 48px; border-radius: 50%; background: var(--bg-surface);
+            color: var(--text-primary); border: 1px solid var(--border-light);
+            display: grid; place-items: center; cursor: pointer; transition: all 0.2s;
+        }
+        .btn-circle:hover { background: var(--bg-surface-hover); border-color: var(--text-primary); }
+        .btn-circle.accent { background: var(--accent-primary); color: #fff; border: 1px solid var(--accent-primary); }
+        .btn-circle.accent:hover { background: #fff; color: var(--accent-primary); }
+
+        /* --- HERO --- */
+        .hero { padding: 180px 0 100px; position: relative; }
+        .hero-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 4rem; align-items: center; position: relative; z-index: 2; }
+        .hero-title { font-size: clamp(3rem, 6vw, 5rem); font-weight: 700; margin-bottom: 24px; letter-spacing: -0.04em; }
+        .crosshair {
+            position: absolute; width: 20px; height: 20px;
+            border-top: 1px solid var(--text-secondary); border-left: 1px solid var(--text-secondary); opacity: 0.3; z-index: 2;
+        }
+        .ch-tl { top: 100px; left: 24px; }
+        .ch-br { bottom: 100px; right: 24px; transform: rotate(180deg); }
+        .monitor-card {
+            background: var(--bg-surface); border: 1px solid var(--border-light); border-radius: var(--radius-lg);
+            padding: 24px; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.3); position: relative;
+        }
+        .monitor-card::before {
+            content: ''; position: absolute; inset: 0; opacity: 0.05;
+            background-image: radial-gradient(var(--text-primary) 1px, transparent 1px);
+            background-size: 10px 10px; pointer-events: none;
+        }
+
+        /* --- COMPONENTS --- */
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            padding: 14px 28px; border-radius: var(--radius-md); 
+            font-weight: 600; font-size: 0.85rem; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.05em;
+            cursor: pointer; border: 1px solid transparent; transition: all 0.2s;
+        }
+        .btn-primary { background: var(--accent-primary); color: #fff; box-shadow: 4px 4px 0 rgba(0,0,0,0.2); }
+        .btn-primary:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 rgba(0,0,0,0.2); }
+        .btn-secondary { background: transparent; border: 1px solid var(--border-light); color: var(--text-primary); }
+        .btn-secondary:hover { border-color: var(--accent-primary); color: var(--accent-primary); }
+        .badge {
+            display: inline-flex; padding: 6px 12px; border-radius: 4px; font-size: 0.75rem; 
+            font-family: var(--font-mono); font-weight: 600; text-transform: uppercase;
+            background: rgba(255, 77, 0, 0.1); color: var(--accent-primary); border: 1px solid var(--accent-primary);
+        }
+
+        /* --- PROCESS --- */
+        .process-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-top: 60px; position: relative; z-index: 2; }
+        .process-steps::before {
+            content: ''; position: absolute; top: 24px; left: 40px; right: 40px; height: 1px;
+            border-top: 2px dashed var(--border-light); z-index: -1;
+        }
+        .step-card {
+            background: var(--bg-surface); border: 1px solid var(--border-light); padding: 24px;
+            border-radius: var(--radius-md); transition: transform 0.2s;
+        }
+        .step-card:hover { border-color: var(--accent-primary); }
+        .step-num {
+            width: 40px; height: 40px; background: var(--bg-body); border: 1px solid var(--accent-primary);
+            color: var(--accent-primary); font-family: var(--font-mono); font-weight: 600;
+            display: grid; place-items: center; margin-bottom: 16px;
+        }
+
+        /* --- CITIZEN REPORTING --- */
+        .citizen-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; z-index: 2; position: relative; }
+        .report-demo {
+            background: #1a1a1a; border: 4px solid #333; border-radius: 4px; padding: 12px; 
+            width: 320px; margin: 0 auto; position: relative; box-shadow: 20px 20px 0 rgba(0,0,0,0.1);
+        }
+        .app-screen { background: var(--bg-surface); height: 500px; overflow: hidden; position: relative; display: flex; flex-direction: column; border: 1px solid #333; }
+        .app-header { padding: 12px; font-family: var(--font-mono); text-transform: uppercase; font-size: 0.8rem; border-bottom: 1px solid var(--border-light); display: flex; justify-content: space-between; }
+        .photo-area {
+            flex-grow: 1; background: #111; position: relative; display: flex; align-items: center; justify-content: center;
+            background-image: linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        .scan-line {
+            position: absolute; top: 0; left: 0; width: 100%; height: 2px;
+            background: var(--status-critical); box-shadow: 0 0 10px var(--status-critical); animation: scan 2s infinite linear;
+        }
+        @keyframes scan { 0% { top: 10%; opacity: 0; } 20% { opacity: 1; } 90% { top: 90%; opacity: 1; } 100% { top: 95%; opacity: 0; } }
+        .app-results { padding: 20px; border-top: 2px solid var(--status-critical); background: rgba(220, 38, 38, 0.05); }
+        .result-row { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.8rem; margin-bottom: 8px; }
+
+        /* --- ACCESS TIERS --- */
+        .pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 60px; z-index: 2; position: relative; }
+        .pricing-card {
+            background: var(--bg-surface); border: 1px solid var(--border-light); padding: 32px;
+            border-radius: var(--radius-md); position: relative; transition: 0.2s; display: flex; flex-direction: column;
+        }
+        .pricing-card:hover { border-color: var(--accent-primary); transform: translateY(-4px); }
+        .pricing-card::after { content: ''; position: absolute; bottom: -1px; right: -1px; width: 10px; height: 10px; border-bottom: 2px solid var(--text-secondary); border-right: 2px solid var(--text-secondary); }
+        .pricing-card::before { content: ''; position: absolute; top: -1px; left: -1px; width: 10px; height: 10px; border-top: 2px solid var(--text-secondary); border-left: 2px solid var(--text-secondary); }
+        .pricing-card.popular { border: 1px solid var(--accent-primary); background: rgba(255, 77, 0, 0.02); }
+        .popular-badge {
+            position: absolute; top: 0; right: 0; background: var(--accent-primary); color: #fff;
+            font-family: var(--font-mono); font-size: 0.7rem; padding: 4px 8px;
+        }
+        .access-level { font-size: 1.5rem; font-weight: 700; margin-bottom: 16px; font-family: var(--font-display); }
+        .price-features { margin: 32px 0; flex-grow: 1; }
+        .price-feature-item { display: flex; gap: 12px; margin-bottom: 12px; font-size: 0.9rem; font-family: var(--font-mono); color: var(--text-secondary); }
+        .check-icon { color: var(--accent-primary); font-weight: bold; }
+
+        /* --- FAQ SECTION (NEW) --- */
+        .faq-container { max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; position: relative; z-index: 2; }
+        .faq-item {
+            border: 1px solid var(--border-light); border-radius: var(--radius-md); background: var(--bg-surface);
+            transition: all 0.3s ease; overflow: hidden;
+        }
+        .faq-item[open] { border-color: var(--accent-primary); background: var(--bg-surface-hover); }
+        
+        .faq-summary {
+            padding: 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+            font-family: var(--font-mono); font-size: 0.9rem; font-weight: 600; list-style: none; color: var(--text-primary);
+        }
+        .faq-summary::-webkit-details-marker { display: none; }
+        .faq-summary::after { content: '+'; font-size: 1.2rem; color: var(--accent-primary); transition: transform 0.3s; }
+        .faq-item[open] .faq-summary::after { transform: rotate(45deg); }
+        
+        .faq-content { padding: 0 20px 20px; color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6; border-top: 1px dashed var(--border-light); margin-top: -5px; padding-top: 15px; }
+
+        /* --- FOOTER --- */
+        .footer { border-top: 1px solid var(--border-light); padding: 80px 0 40px; background: var(--bg-surface); }
+        .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 40px; }
+        .footer-link { color: var(--text-secondary); font-family: var(--font-mono); font-size: 0.85rem; margin-bottom: 12px; display: block; }
+        .footer-link:hover { color: var(--accent-primary); }
+
+        /* --- MODAL STYLES --- */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 2000;
+            display: none; place-items: center; padding: 20px;
+            backdrop-filter: blur(4px); opacity: 0; transition: opacity 0.3s;
+        }
+        .modal-overlay.active { display: grid; opacity: 1; }
+        .modal-content {
+            background: var(--bg-surface); border: 1px solid var(--accent-primary);
+            width: 100%; max-width: 450px; padding: 32px; position: relative;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+            transform: translateY(20px); transition: transform 0.3s;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+        .modal-overlay.active .modal-content { transform: translateY(0); }
+        
+        .form-group { margin-bottom: 20px; }
+        .form-label { display: block; font-family: var(--font-mono); font-size: 0.75rem; margin-bottom: 8px; color: var(--text-secondary); letter-spacing: 0.05em; }
+        .form-input, .form-select, .form-textarea {
+            width: 100%; padding: 12px; background: var(--bg-body); border: 1px solid var(--border-light);
+            color: var(--text-primary); font-family: var(--font-main); outline: none; transition: 0.2s; border-radius: var(--radius-md);
+        }
+        .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--accent-primary); }
+        .close-modal { 
+            position: absolute; top: 20px; right: 20px; background: none; border: none; 
+            font-size: 1.5rem; color: var(--text-secondary); cursor: pointer; line-height: 1;
+        }
+        .close-modal:hover { color: var(--accent-primary); }
+
+        /* File Upload Styles */
+        .upload-zone {
+            border: 2px dashed var(--border-light);
+            border-radius: var(--radius-md);
+            padding: 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: var(--bg-body);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .upload-zone:hover {
+            border-color: var(--accent-primary);
+            background: rgba(37, 99, 235, 0.05);
+        }
+        .upload-input {
+            position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+        }
+        .upload-icon { color: var(--text-secondary); margin-bottom: 4px; }
+        .upload-text {
+            font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-secondary); pointer-events: none;
+        }
+        .file-selected { color: var(--accent-primary); font-weight: 600; }
+
+        /* Auth Tabs */
+        .auth-tabs {
+            display: flex; border-bottom: 1px solid var(--border-light); margin-bottom: 24px;
+        }
+        .auth-tab {
+            flex: 1; background: none; border: none; padding: 12px;
+            font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-secondary);
+            cursor: pointer; border-bottom: 2px solid transparent; transition: 0.3s;
+        }
+        .auth-tab:hover { color: var(--text-primary); }
+        .auth-tab.active {
+            color: var(--accent-primary); border-bottom-color: var(--accent-primary); font-weight: 600;
+        }
+        .auth-form { display: none; animation: fadeIn 0.3s ease; }
+        .auth-form.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .hero-grid, .tech-container, .citizen-grid, .pricing-grid, .about-grid { grid-template-columns: 1fr !important; }
+            .process-steps { grid-template-columns: 1fr 1fr; }
+            .process-steps::before { display: none; }
+        }
+        @media (max-width: 600px) { .process-steps { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body id="home">
+
+    <!-- HEADER -->
+    <nav class="navbar" id="navbar">
+        <div class="container nav-content">
+            <a href="#" class="logo-circle" aria-label="StructIQ Home">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h20"/><path d="M6 16V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12"/><line x1="10" y1="12" x2="14" y2="12"/><line x1="10" y1="8" x2="14" y2="8"/></svg>
+            </a>
+            <div class="nav-actions">
+                <button id="reportBtn" class="btn" style="background: var(--status-critical); color: white; padding: 8px 16px; font-size: 0.75rem; margin-right: 8px; border: 1px solid var(--status-critical);">
+                    <span style="margin-right: 6px;">⚠</span> REPORT ISSUE
+                </button>
+                <button id="authBtn" class="btn" style="background: var(--accent-primary); color: white; padding: 8px 16px; font-size: 0.75rem; border: 1px solid var(--accent-primary);">
+                    LOGIN / SIGNUP
+                </button>
+                <button id="themeBtn" class="btn-circle" aria-label="Toggle Theme">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- HERO SECTION -->
+    <section class="hero">
+        <div class="orb-container">
+            <div class="orb accent" style="width: 250px; height: 250px; top: 10%; right: 15%; animation-duration: 25s;"></div>
+            <div class="orb accent" style="width: 100px; height: 100px; bottom: 20%; left: 10%; animation-duration: 15s; animation-delay: -5s;"></div>
+            <div class="orb" style="width: 400px; height: 400px; top: -10%; left: -10%; opacity: 0.3; animation-duration: 40s;"></div>
+        </div>
+        
+        <!-- PARALLAX BLUEPRINT CITY -->
+        <div class="blueprint-city">
+            <!-- Back Layer: Mountains -->
+            <div class="city-layer layer-mountains">
+                <svg viewBox="0 0 1200 300" preserveAspectRatio="none">
+                    <path d="M0,300 L200,150 L400,300 L600,100 L900,300 L1200,200 L1200,300 Z" fill="none" stroke="currentColor" stroke-width="1" />
+                    <path d="M-100,300 L100,200 L300,300 L500,180 L800,300 L1100,250 L1300,300 Z" fill="none" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+                </svg>
+            </div>
+            
+            <!-- Mid Layer: Buildings -->
+            <div class="city-layer layer-buildings">
+                <svg viewBox="0 0 1200 400" preserveAspectRatio="none">
+                    <path d="M50,400 V200 H150 V400 M100,200 V150 M250,400 V100 H350 V400 M450,400 V250 H550 V400 M650,400 V180 H750 V400 M850,400 V300 H950 V400" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                    <rect x="70" y="220" width="60" height="10" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.5"/>
+                    <rect x="70" y="250" width="60" height="10" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.5"/>
+                    <rect x="270" y="120" width="60" height="10" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.5"/>
+                    <rect x="270" y="150" width="60" height="10" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.5"/>
+                </svg>
+            </div>
+
+            <!-- Front Layer: Bridges -->
+            <div class="city-layer layer-bridges">
+                <svg viewBox="0 0 1200 200" preserveAspectRatio="none">
+                    <path d="M0,200 Q300,50 600,200 T1200,200" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="10,5"/>
+                    <path d="M0,200 L1200,200" fill="none" stroke="currentColor" stroke-width="3"/>
+                    <line x1="300" y1="200" x2="300" y2="125" stroke="currentColor" stroke-width="2"/>
+                    <line x1="900" y1="200" x2="900" y2="125" stroke="currentColor" stroke-width="2"/>
+                </svg>
+            </div>
+        </div>
+
+        <div class="crosshair ch-tl"></div><div class="crosshair ch-br"></div>
+        
+        <div class="container hero-grid">
+            <div class="hero-content">
+                <div class="badge" style="margin-bottom: 24px;">System v1.0.4 Online</div>
+                <h1 class="hero-title">Structural<br>Intelligence.</h1>
+                <p style="color: var(--text-secondary); margin-bottom: 32px; font-size: 1.15rem; max-width: 480px; font-family: var(--font-mono);">
+                    Predictive analysis for civil infrastructure. Converting concrete data into maintenance timelines.
+                </p>
+                <div style="display: flex; gap: 16px;">
+                    <a href="#contact" class="btn btn-primary">Initialize Pilot</a>
+                    <a href="#process" class="btn btn-secondary">View Schematics</a>
+                </div>
+            </div>
+
+            <div class="monitor-card">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 24px; border-bottom: 1px solid var(--border-light); padding-bottom: 12px;">
+                    <div style="display:flex; gap:12px; align-items:center;">
+                        <div style="width:12px; height:12px; background:var(--status-safe); border-radius:50%;"></div>
+                        <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-secondary);">ASSET: BR-402</div>
+                    </div>
+                    <div style="font-family: var(--font-mono); font-size: 0.8rem; font-weight:700;">LIVE FEED</div>
+                </div>
+                <div style="position: relative; width: 100%; height: 200px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div style="position: relative; display: grid; place-items: center; border: 1px solid var(--border-light); background: var(--bg-body);">
+                        <svg style="width: 120px; height: 120px; transform: rotate(-90deg);">
+                            <circle cx="60" cy="60" r="50" fill="none" stroke="var(--border-light)" stroke-width="8" />
+                            <circle cx="60" cy="60" r="50" fill="none" stroke="var(--accent-primary)" stroke-width="8" stroke-dasharray="314" stroke-dashoffset="62" stroke-linecap="butt" />
+                        </svg>
+                        <div style="position: absolute; text-align: center;">
+                            <span style="font-size: 2.5rem; font-weight: 700; display: block; line-height: 1;">80</span>
+                            <span style="font-size: 0.65rem; font-family: var(--font-mono); color: var(--text-secondary);">SCORE</span>
+                        </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <div style="background: var(--bg-body); padding: 8px; border: 1px solid var(--border-light); font-family: var(--font-mono); font-size: 0.75rem;">
+                            <span style="color: var(--text-secondary);">LOAD</span><div style="font-weight: 600;">450 Tons</div>
+                        </div>
+                        <div style="background: var(--bg-body); padding: 8px; border: 1px solid var(--border-light); font-family: var(--font-mono); font-size: 0.75rem;">
+                            <span style="color: var(--text-secondary);">VIBE</span><div style="font-weight: 600;">0.04 g</div>
+                        </div>
+                        <div style="background: var(--bg-body); padding: 8px; border: 1px solid var(--border-light); font-family: var(--font-mono); font-size: 0.75rem;">
+                            <span style="color: var(--text-secondary);">TEMP</span><div style="font-weight: 600;">28°C</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ASSET DIAGNOSTICS -->
+    <section id="analysis" class="section" style="background: var(--bg-body); border-bottom: 1px solid var(--border-light);">
+        <style>
+            /* --- ANALYSIS SECTION CSS --- */
+            .analysis-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 40px; align-items: center; }
+            .blueprint-view {
+                background: var(--bg-surface); border: 1px solid var(--border-light); padding: 40px;
+                position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center;
+                height: 400px; border-radius: var(--radius-lg);
+                background-image: 
+                    linear-gradient(rgba(37, 99, 235, 0.03) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(37, 99, 235, 0.03) 1px, transparent 1px);
+                background-size: 20px 20px;
+            }
+            .blueprint-label {
+                position: absolute; top: 16px; left: 16px; font-family: var(--font-mono); font-size: 0.75rem; 
+                font-weight: 600; color: var(--text-secondary); border: 1px solid var(--border-light); padding: 4px 8px; background: var(--bg-body);
+            }
+            .blueprint-overlay {
+                position: absolute; bottom: 16px; right: 16px; text-align: right;
+            }
+
+            .data-panel { display: flex; flex-direction: column; gap: 24px; }
+            .score-header { display: flex; gap: 24px; align-items: center; padding-bottom: 24px; border-bottom: 1px dashed var(--border-light); }
+            .score-box { 
+                background: var(--bg-surface); border: 2px solid var(--border-light); padding: 16px 24px; 
+                text-align: center; border-radius: var(--radius-md);
+            }
+            .score-val { display: block; font-size: 3rem; font-weight: 700; line-height: 1; color: var(--text-primary); }
+            .score-total { font-size: 0.9rem; color: var(--text-secondary); font-family: var(--font-mono); }
+            .status-label { font-family: var(--font-mono); font-weight: 700; font-size: 1.1rem; letter-spacing: 0.05em; }
+
+            .param-list { display: flex; flex-direction: column; gap: 16px; }
+            .param-item { display: flex; flex-direction: column; gap: 6px; }
+            .param-info { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.85rem; }
+            .progress-bar { height: 6px; background: var(--bg-body); border: 1px solid var(--border-light); border-radius: 4px; overflow: hidden; }
+            .fill { height: 100%; transition: width 1s ease-out; }
+
+            .ai-insight {
+                background: rgba(37, 99, 235, 0.05); border-left: 4px solid var(--accent-secondary); padding: 16px;
+                font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5; margin-top: 12px;
+            }
+            @media (max-width: 900px) { .analysis-grid { grid-template-columns: 1fr; } }
+        </style>
+
+        <div class="container">
+            <div class="text-center" style="margin-bottom: 60px;">
+                <span class="badge">Deep Dive</span>
+                <h2 style="margin-top: 16px;">Asset Diagnostics</h2>
+                <p style="color: var(--text-secondary); max-width: 600px; margin: 0 auto; margin-top: 16px;">
+                    Detailed breakdown of structural health based on multi-sensor fusion.
+                </p>
+            </div>
+
+            <div class="analysis-grid">
+                <!-- Visual Representation -->
+                <div class="blueprint-view">
+                    <div class="blueprint-label">ASSET: NORTH BRIDGE (ID-402)</div>
+                    <!-- Simple SVG Bridge Wireframe -->
+                    <svg viewBox="0 0 400 200" style="width: 100%; height: auto; opacity: 0.8;">
+                        <!-- Bridge Deck -->
+                        <line x1="20" y1="150" x2="380" y2="150" stroke="currentColor" stroke-width="2" />
+                        <!-- Pylons -->
+                        <line x1="100" y1="150" x2="100" y2="50" stroke="currentColor" stroke-width="2" />
+                        <line x1="300" y1="150" x2="300" y2="50" stroke="currentColor" stroke-width="2" />
+                        <!-- Cables -->
+                        <line x1="100" y1="50" x2="20" y2="150" stroke="var(--text-secondary)" stroke-width="1" />
+                        <line x1="100" y1="50" x2="150" y2="150" stroke="var(--text-secondary)" stroke-width="1" />
+                        <line x1="300" y1="50" x2="250" y2="150" stroke="var(--text-secondary)" stroke-width="1" />
+                        <line x1="300" y1="50" x2="380" y2="150" stroke="var(--text-secondary)" stroke-width="1" />
+                        <!-- Stress Hotspot -->
+                        <circle cx="150" cy="150" r="10" fill="rgba(255, 77, 0, 0.3)" stroke="var(--accent-primary)">
+                            <animate attributeName="r" values="5;25;5" dur="2s" repeatCount="indefinite" />
+                            <animate attributeName="opacity" values="1;0;1" dur="2s" repeatCount="indefinite" />
+                        </circle>
+                    </svg>
+                    <div class="blueprint-overlay">
+                        <div style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--accent-primary); background: var(--bg-body); padding: 4px 8px; border: 1px solid var(--accent-primary);">⚠ STRESS FRACTURE DETECTED</div>
+                    </div>
+                </div>
+
+                <!-- Data Panel -->
+                <div class="data-panel">
+                    <div class="score-header">
+                        <div class="score-box">
+                            <span class="score-val">72</span>
+                            <span class="score-total">/100</span>
+                        </div>
+                        <div style="flex-grow: 1;">
+                            <div class="status-label" style="color: var(--status-monitor);">STATUS: MONITOR</div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px; font-family: var(--font-mono);">Last Scan: 12 mins ago</div>
+                        </div>
+                    </div>
+
+                    <div class="param-list">
+                        <div class="param-item">
+                            <div class="param-info">
+                                <span>Structural Integrity</span>
+                                <span>65%</span>
+                            </div>
+                            <div class="progress-bar"><div class="fill" style="width: 65%; background: var(--status-monitor);"></div></div>
+                        </div>
+                        <div class="param-item">
+                            <div class="param-info">
+                                <span>Load Capacity</span>
+                                <span>88%</span>
+                            </div>
+                            <div class="progress-bar"><div class="fill" style="width: 88%; background: var(--status-safe);"></div></div>
+                        </div>
+                        <div class="param-item">
+                            <div class="param-info">
+                                <span>Material Degradation</span>
+                                <span>42%</span>
+                            </div>
+                            <div class="progress-bar"><div class="fill" style="width: 42%; background: var(--status-critical);"></div></div>
+                        </div>
+                        <div class="param-item">
+                            <div class="param-info">
+                                <span>Seismic Resistance</span>
+                                <span>95%</span>
+                            </div>
+                            <div class="progress-bar"><div class="fill" style="width: 95%; background: var(--status-safe);"></div></div>
+                        </div>
+                    </div>
+
+                    <div class="ai-insight">
+                        <strong style="display: block; margin-bottom: 4px; color: var(--accent-secondary);">AI PREDICTION:</strong> 
+                        High probability of micro-fracture expansion due to seasonal thermal contraction. Recommended inspection within 14 days.
+                    </div>
+                </div>
+            </div>
+
+            <!-- LIVE NETWORK ACTIVITY -->
+            <div class="network-status" style="margin-top: 60px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <h3 style="font-size: 1.2rem; margin: 0; font-family: var(--font-display);">Live Network Activity</h3>
+                    <div class="badge" style="background: rgba(37, 99, 235, 0.1); color: var(--accent-secondary); border-color: var(--accent-secondary);">SIMULATION DATA</div>
+                </div>
+                
+                <div class="status-table" style="border: 1px solid var(--border-light); background: var(--bg-surface); border-radius: var(--radius-md); overflow: hidden;">
+                    <div class="status-header" style="display: grid; grid-template-columns: 1fr 1fr 2fr 1fr 1fr; padding: 12px 24px; border-bottom: 1px solid var(--border-light); font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-secondary); background: rgba(0,0,0,0.02); letter-spacing: 0.05em;">
+                        <span>ID</span>
+                        <span>TYPE</span>
+                        <span>LOCATION</span>
+                        <span>STATUS</span>
+                        <span>SCORE</span>
+                    </div>
+                    
+                    <!-- Dummy Row 1 -->
+                    <div class="status-row" style="display: grid; grid-template-columns: 1fr 1fr 2fr 1fr 1fr; padding: 16px 24px; border-bottom: 1px solid var(--border-light); font-family: var(--font-mono); font-size: 0.85rem; align-items: center; color: var(--text-primary);">
+                        <span style="font-weight: 600;">HWY-904</span>
+                        <span>Highway</span>
+                        <span>East District, Sector 4</span>
+                        <span style="color: var(--status-safe);">● STABLE</span>
+                        <span>98/100</span>
+                    </div>
+
+                    <!-- Dummy Row 2 -->
+                    <div class="status-row" style="display: grid; grid-template-columns: 1fr 1fr 2fr 1fr 1fr; padding: 16px 24px; border-bottom: 1px solid var(--border-light); font-family: var(--font-mono); font-size: 0.85rem; align-items: center; color: var(--text-primary);">
+                        <span style="font-weight: 600;">TUN-101</span>
+                        <span>Tunnel</span>
+                        <span>Metro Underground</span>
+                        <span style="color: var(--status-monitor);">● MONITOR</span>
+                        <span>65/100</span>
+                    </div>
+
+                    <!-- Dummy Row 3 -->
+                    <div class="status-row" style="display: grid; grid-template-columns: 1fr 1fr 2fr 1fr 1fr; padding: 16px 24px; border-bottom: 1px solid var(--border-light); font-family: var(--font-mono); font-size: 0.85rem; align-items: center; background: rgba(220, 38, 38, 0.05); color: var(--text-primary);">
+                        <span style="font-weight: 600;">DAM-007</span>
+                        <span>Utility Dam</span>
+                        <span>Reservoir Zone A</span>
+                        <span style="color: var(--status-critical); font-weight: 700;">⚠ CRITICAL</span>
+                        <span>32/100</span>
+                    </div>
+
+                    <!-- Dummy Row 4 -->
+                    <div class="status-row" style="display: grid; grid-template-columns: 1fr 1fr 2fr 1fr 1fr; padding: 16px 24px; border-bottom: 1px solid var(--border-light); font-family: var(--font-mono); font-size: 0.85rem; align-items: center; color: var(--text-primary);">
+                        <span style="font-weight: 600;">BRG-221</span>
+                        <span>Overpass</span>
+                        <span>Industrial Belt</span>
+                        <span style="color: var(--status-safe);">● STABLE</span>
+                        <span>92/100</span>
+                    </div>
+                </div>
+                <!-- Warning Disclaimer -->
+                <p style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 12px; font-family: var(--font-mono); border-left: 2px solid var(--accent-primary); padding-left: 12px;">
+                    * Note: All data presented above is simulated for demonstration purposes only and does not reflect real-world infrastructure status.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- PROCESS SECTION -->
+    <section id="process" class="section">
+        <div class="orb-container">
+            <div class="orb" style="width: 300px; height: 300px; bottom: 0; left: 20%; opacity: 0.2; animation-duration: 30s;"></div>
+            <div class="orb" style="width: 150px; height: 150px; top: 10%; right: 5%; opacity: 0.2;"></div>
+        </div>
+        <div class="container">
+            <div class="text-center" style="max-width: 700px; margin: 0 auto; margin-bottom: 60px;">
+                <span class="badge">Workflow</span>
+                <h2 style="margin-top: 16px;">Data Pipeline</h2>
+            </div>
+            <div class="process-steps">
+                <div class="step-card">
+                    <div class="step-num">01</div>
+                    <h3 style="font-size: 1rem; margin-bottom: 8px;">Asset Tagging</h3>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); font-family: var(--font-mono);">Metadata Registration: Age, Material, Coordinates.</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-num">02</div>
+                    <h3 style="font-size: 1rem; margin-bottom: 8px;">Ingestion</h3>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); font-family: var(--font-mono);">Sensors, Reports, Satellite Imagery.</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-num">03</div>
+                    <h3 style="font-size: 1rem; margin-bottom: 8px;">Analysis</h3>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); font-family: var(--font-mono);">AI Model computes unified Health Score (0-100).</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-num">04</div>
+                    <h3 style="font-size: 1rem; margin-bottom: 8px;">Alerts</h3>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); font-family: var(--font-mono);">Automated dispatch for Critical status assets.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CITIZEN SECTION -->
+    <section id="citizens" class="section" style="background: var(--bg-surface); border-top: 1px solid var(--border-light); border-bottom: 1px solid var(--border-light);">
+        <div class="container citizen-grid">
+            <div>
+                <span class="badge">Field Operations</span>
+                <h2 style="font-size: 2.5rem; margin: 16px 0;">Crowdsourced Verification.</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 24px; font-family: var(--font-mono);">
+                    Mobile integration allows authorized field agents and citizens to upload visual data. Computer vision models validate damage and adjust risk scores instantly.
+                </p>
+                <div style="display: flex; gap: 16px; flex-direction: column;">
+                <div style="margin-top: 32px;">
+                    <button class="btn btn-primary" onclick="document.getElementById('reportBtn').click()">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right: 12px;"><path d="M12 2L2 22h20L12 2zm0 16v-2m0-4v-4"/></svg>
+                        Report Incident
+                    </button>
+                    <p style="margin-top: 12px; font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-secondary);">
+                        * Geo-location required for accurate tagging.
+                    </p>
+                </div>
+            </div>
+            <div class="report-demo">
+                <div class="app-screen">
+                    <div class="app-header"><span>STRUCTIQ FIELD</span><span style="color: var(--status-critical);">● REC</span></div>
+                    <div class="photo-area">
+                        <div class="scan-line"></div>
+                        <div style="position: absolute; bottom: 20px; font-family: var(--font-mono); font-size: 0.7rem; color: var(--accent-primary); background: rgba(0,0,0,0.8); padding: 4px 8px; border: 1px solid var(--accent-primary);">SCANNING_SURFACE...</div>
+                    </div>
+                    <div class="app-results">
+                        <div class="result-row"><span class="result-label">DAMAGE TYPE</span><span style="font-weight: 700;">CONCRETE FISSURE</span></div>
+                        <div class="result-row"><span class="result-label">SEVERITY</span><span style="font-weight: 700; color: var(--status-critical);">CRITICAL</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- PRICING SECTION -->
+    <section id="pricing" class="section" style="background: var(--bg-surface); border-top: 1px solid var(--border-light);">
+         <div class="orb-container">
+            <div class="orb accent" style="width: 200px; height: 200px; top: -50px; left: 10%;"></div>
+            <div class="orb" style="width: 200px; height: 200px; bottom: -50px; right: 10%;"></div>
+        </div>
+        
+        <!-- PARALLAX BLUEPRINT CITY (REPEATED) -->
+        <div class="blueprint-city">
+            <!-- Back Layer: Mountains -->
+            <div class="city-layer layer-mountains">
+                <svg viewBox="0 0 1200 300" preserveAspectRatio="none">
+                    <path d="M0,300 L200,150 L400,300 L600,100 L900,300 L1200,200 L1200,300 Z" fill="none" stroke="currentColor" stroke-width="1" />
+                    <path d="M-100,300 L100,200 L300,300 L500,180 L800,300 L1100,250 L1300,300 Z" fill="none" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+                </svg>
+            </div>
+            
+            <!-- Mid Layer: Buildings -->
+            <div class="city-layer layer-buildings">
+                <svg viewBox="0 0 1200 400" preserveAspectRatio="none">
+                    <path d="M50,400 V200 H150 V400 M100,200 V150 M250,400 V100 H350 V400 M450,400 V250 H550 V400 M650,400 V180 H750 V400 M850,400 V300 H950 V400" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                    <rect x="70" y="220" width="60" height="10" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.5"/>
+                    <rect x="70" y="250" width="60" height="10" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.5"/>
+                    <rect x="270" y="120" width="60" height="10" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.5"/>
+                    <rect x="270" y="150" width="60" height="10" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.5"/>
+                </svg>
+            </div>
+
+            <!-- Front Layer: Bridges -->
+            <div class="city-layer layer-bridges">
+                <svg viewBox="0 0 1200 200" preserveAspectRatio="none">
+                    <path d="M0,200 Q300,50 600,200 T1200,200" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="10,5"/>
+                    <path d="M0,200 L1200,200" fill="none" stroke="currentColor" stroke-width="3"/>
+                    <line x1="300" y1="200" x2="300" y2="125" stroke="currentColor" stroke-width="2"/>
+                    <line x1="900" y1="200" x2="900" y2="125" stroke="currentColor" stroke-width="2"/>
+                </svg>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="text-center" style="margin-bottom: 60px;">
+                <h2 style="font-size: 2.5rem;">Deployment Access</h2>
+            </div>
+            <div class="pricing-grid">
+                <div class="pricing-card">
+                    <h3 class="price-title">PILOT</h3>
+                    <div class="access-level">Proof of Concept</div>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem; font-family: var(--font-mono);">Single district deployment for evaluation.</p>
+                    <ul class="price-features">
+                        <li class="price-feature-item"><span class="check-icon">></span> 50 Assets</li>
+                        <li class="price-feature-item"><span class="check-icon">></span> 3 Admin Keys</li>
+                        <li class="price-feature-item"><span class="check-icon">></span> Basic Logs</li>
+                    </ul>
+                    <a href="#contact" class="btn btn-secondary" style="width: 100%;">Request Key</a>
+                </div>
+                <div class="pricing-card popular">
+                    <div class="popular-badge">RECOMMENDED</div>
+                    <h3 class="price-title">MUNICIPAL</h3>
+                    <div class="access-level">Standard License</div>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem; font-family: var(--font-mono);">Full city-wide monitoring suite.</p>
+                    <ul class="price-features">
+                        <li class="price-feature-item"><span class="check-icon">></span> Unlimited Assets</li>
+                        <li class="price-feature-item"><span class="check-icon">></span> API Access</li>
+                        <li class="price-feature-item"><span class="check-icon">></span> Historical Data</li>
+                    </ul>
+                    <a href="#contact" class="btn btn-primary" style="width: 100%;">Request Access</a>
+                </div>
+                <div class="pricing-card">
+                    <h3 class="price-title">STATE</h3>
+                    <div class="access-level">Custom Build</div>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem; font-family: var(--font-mono);">On-premise solutions for government bodies.</p>
+                    <ul class="price-features">
+                        <li class="price-feature-item"><span class="check-icon">></span> Dedicated Server</li>
+                        <li class="price-feature-item"><span class="check-icon">></span> Custom AI Models</li>
+                        <li class="price-feature-item"><span class="check-icon">></span> SLA Support</li>
+                    </ul>
+                    <a href="#contact" class="btn btn-secondary" style="width: 100%;">Contact Sales</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ABOUT SECTION (NEW) -->
+    <section id="about" class="section" style="border-bottom: 1px solid var(--border-light);">
+        <div class="container">
+            <div class="about-grid" style="max-width: 800px; margin: 0 auto;">
+                
+                <!-- Manifesto -->
+                <div>
+                    <span class="badge">Our Mission</span>
+                    <h2 style="font-size: 2.5rem; margin: 24px 0;">Immunizing Cities Against Decay.</h2>
+                    <div style="font-family: var(--font-mono); color: var(--text-secondary); line-height: 1.8; font-size: 0.9rem;">
+                        <p style="margin-bottom: 24px;">
+                            Infrastructure is the silent backbone of civilization. We believe that concrete shouldn't just stand; it should speak. 
+                        </p>
+                        <p style="margin-bottom: 24px;">
+                            StructIQ was founded by a coalition of civil engineers and machine learning specialists with a singular directive: <strong>Move from reactive repairs to predictive prevention.</strong>
+                        </p>
+                        <p>
+                            By fusing satellite imagery, IoT sensor data, and historical blueprints, we are building the nervous system for the modern metropolis.
+                        </p>
+                    </div>
+
+                    <div style="margin-top: 40px;">
+                        <div style="border-left: 2px solid var(--accent-primary); padding-left: 16px;">
+                            <div style="font-size: 2rem; font-weight: 700;">2026</div>
+                            <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-secondary);">ESTABLISHED</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ SECTION -->
+    <section id="faq" class="section">
+        <div class="container">
+            <div class="text-center" style="margin-bottom: 40px;">
+                <span class="badge">Support</span>
+                <h2 style="margin-top: 16px;">Common Queries</h2>
+            </div>
+            
+            <div class="faq-container">
+                <details class="faq-item">
+                    <summary class="faq-summary">How does the prediction engine work?</summary>
+                    <div class="faq-content">
+                        Our AI analyzes historical data (age, material), real-time sensor inputs (load, vibration), and environmental factors to calculate a dynamic probability of failure.
+                    </div>
+                </details>
+                
+                <details class="faq-item">
+                    <summary class="faq-summary">Is it compatible with existing municipal systems?</summary>
+                    <div class="faq-content">
+                        Yes. StructIQ is built with a RESTful API architecture that allows seamless data export to existing GIS and asset management software used by city councils.
+                    </div>
+                </details>
+                
+                <details class="faq-item">
+                    <summary class="faq-summary">What is included in the Pilot Program?</summary>
+                    <div class="faq-content">
+                        The Pilot allows you to monitor up to 50 assets in a single district for 3 months. It includes full access to the dashboard and basic reporting features.
+                    </div>
+                </details>
+                
+                <details class="faq-item">
+                    <summary class="faq-summary">How secure is the infrastructure data?</summary>
+                    <div class="faq-content">
+                        We use enterprise-grade encryption for all data at rest and in transit. Access is strictly controlled via role-based authentication suitable for government standards.
+                    </div>
+                </details>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div>
+                    <div style="font-family: var(--font-display); font-weight: 700; font-size: 1.5rem; margin-bottom: 20px;">STRUCTIQ</div>
+                    <p style="color: var(--text-secondary); font-family: var(--font-mono); font-size: 0.8rem;">ENGINEERED IN SAN FRANCISCO<br>EST. 2026</p>
+                </div>
+                <div>
+                    <h4 style="font-size: 0.9rem; margin-bottom: 16px;">SYSTEM</h4>
+                    <a href="#" class="footer-link">Documentation</a>
+                    <a href="#" class="footer-link">API Status</a>
+                    <a href="#" class="footer-link">Security</a>
+                    <a href="#faq" class="footer-link">FAQ</a>
+                </div>
+                <div>
+                    <h4 style="font-size: 0.9rem; margin-bottom: 16px;">ORGANIZATION</h4>
+                    <a href="#about" class="footer-link">About</a>
+                    <a href="#" class="footer-link">Contact</a>
+                </div>
+            </div>
+            <div style="margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--border-light); text-align: center; color: var(--text-secondary); font-family: var(--font-mono); font-size: 0.75rem;">
+                © 2026 STRUCTIQ INC. ALL SYSTEMS NOMINAL.
+            </div>
+        </div>
+    </footer>
+
+    <!-- REPORT MODAL -->
+    <div id="reportModal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="close-modal">&times;</button>
+            <div style="border-bottom: 1px dashed var(--border-light); padding-bottom: 16px; margin-bottom: 24px;">
+                <h3 style="margin: 0; color: var(--status-critical);">⚠ NEW INCIDENT REPORT</h3>
+                <div style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-secondary);">SECURE UPLOAD CHANNEL</div>
+            </div>
+            
+            <form id="reportForm">
+                <div class="form-group">
+                    <label class="form-label">INCIDENT TYPE</label>
+                    <select class="form-select" required>
+                        <option value="">Select Classification...</option>
+                        <option value="crack">Structural Crack</option>
+                        <option value="spalling">Concrete Spalling</option>
+                        <option value="leak">Water Leakage</option>
+                        <option value="vibration">Abnormal Vibration</option>
+                        <option value="other">Other Hazard</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">LOCATION COORDINATES</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" class="form-input" placeholder="Enter Address or GPS" required>
+                        <button type="button" class="btn-secondary" style="padding: 0 14px;" title="Use Current Location" onclick="this.previousElementSibling.value = '37.7749° N, 122.4194° W'">
+                            ◎
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">SEVERITY LEVEL</label>
+                    <div style="display: flex; gap: 16px; background: var(--bg-body); padding: 12px; border: 1px solid var(--border-light); border-radius: var(--radius-md);">
+                        <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; cursor: pointer;">
+                            <input type="radio" name="severity" value="low"> Low
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; cursor: pointer;">
+                            <input type="radio" name="severity" value="med" checked> Medium
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; cursor: pointer; color: var(--status-critical); font-weight: 600;">
+                            <input type="radio" name="severity" value="high"> CRITICAL
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">EVIDENCE UPLOAD</label>
+                    <div class="upload-zone" id="dropZone">
+                        <input type="file" class="upload-input" id="fileInput" accept="image/*,video/*">
+                        <svg class="upload-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        <span class="upload-text" id="uploadText">Drop Photo/Video or Click to Browse</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">VISUAL DESCRIPTION</label>
+                    <textarea class="form-textarea" rows="3" placeholder="Describe visible damage patterns..."></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%; background: var(--status-critical); border-color: var(--status-critical);">SUBMIT REPORT</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- LOGIN/SIGNUP MODAL -->
+    <div id="loginModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 400px;">
+            <button class="close-modal close-login">&times;</button>
+            
+            <div class="auth-tabs">
+                <button class="auth-tab active" data-tab="login">ACCESS TERMINAL</button>
+                <button class="auth-tab" data-tab="signup">NEW REGISTRATION</button>
+            </div>
+
+            <!-- Login Form -->
+            <form id="loginForm" class="auth-form active">
+                <div class="form-group">
+                    <label class="form-label">OPERATOR ID / EMAIL</label>
+                    <input type="email" class="form-input" required placeholder="user@structiq.io">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">ACCESS KEY</label>
+                    <input type="password" class="form-input" required placeholder="••••••••">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">INITIATE SESSION</button>
+                <div style="text-align: center; margin-top: 16px; font-size: 0.75rem; color: var(--text-secondary);">
+                    <a href="#" style="text-decoration: underline;">Lost Access Key?</a>
+                </div>
+            </form>
+
+            <!-- Signup Form -->
+            <form id="signupForm" class="auth-form">
+                <div class="form-group">
+                    <label class="form-label">FULL DESIGNATION</label>
+                    <input type="text" class="form-input" required placeholder="Jane Doe">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">OFFICIAL EMAIL</label>
+                    <input type="email" class="form-input" required placeholder="name@city.gov">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">CREATE ACCESS KEY</label>
+                    <input type="password" class="form-input" required placeholder="••••••••">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">CLEARANCE LEVEL</label>
+                    <select class="form-select">
+                        <option value="citizen">Citizen Observer</option>
+                        <option value="civil">Civil Engineer</option>
+                        <option value="govt">Municipal Admin</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-secondary" style="width: 100%; border-color: var(--accent-primary); color: var(--accent-primary);">REQUEST CLEARANCE</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const themeBtn = document.getElementById('themeBtn');
+        const html = document.documentElement;
+        
+        themeBtn.addEventListener('click', () => {
+            html.classList.toggle('dark');
+        });
+
+        // Modal Utilities
+        function toggleModalById(modalId, show) {
+            const m = document.getElementById(modalId);
+            if (show) {
+                m.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            } else {
+                m.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        }
+
+        // Close on outside click (Generic)
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', (e) => {
+                if(e.target === overlay) {
+                    overlay.classList.remove('active');
+                    document.body.style.overflow = '';
+                }
+            });
+        });
+
+        // --- REPORT MODAL ---
+        const reportBtn = document.getElementById('reportBtn');
+        const reportModalClose = document.querySelector('#reportModal .close-modal');
+        const reportForm = document.getElementById('reportForm');
+        
+        reportBtn.addEventListener('click', () => toggleModalById('reportModal', true));
+        reportModalClose.addEventListener('click', () => toggleModalById('reportModal', false));
+
+        // File Upload Logic
+        const fileInput = document.getElementById('fileInput');
+        const uploadText = document.getElementById('uploadText');
+        const dropZone = document.getElementById('dropZone');
+
+        if(fileInput) {
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    const fileName = e.target.files[0].name;
+                    uploadText.textContent = "SELECTED: " + fileName;
+                    uploadText.classList.add('file-selected');
+                    dropZone.style.borderColor = 'var(--status-safe)';
+                    dropZone.style.background = 'rgba(5, 150, 105, 0.05)';
+                }
+            });
+        }
+
+        // Report Form Submit
+        reportForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const btn = reportForm.querySelector('button[type="submit"]');
+            const originalText = btn.innerHTML;
+            
+            btn.innerHTML = 'UPLOADING DATA PACKET...';
+            btn.style.opacity = '0.7';
+            btn.disabled = true;
+            
+            setTimeout(() => {
+                btn.innerHTML = '✔ REPORT LOGGED';
+                btn.style.background = 'var(--status-safe)';
+                btn.style.borderColor = 'var(--status-safe)';
+                
+                setTimeout(() => {
+                    toggleModalById('reportModal', false);
+                    setTimeout(() => {
+                        btn.innerHTML = originalText;
+                        btn.style.background = 'var(--status-critical)';
+                        btn.style.borderColor = 'var(--status-critical)';
+                        btn.style.opacity = '1';
+                        btn.disabled = false;
+                        reportForm.reset();
+                        uploadText.textContent = "Drop Photo/Video or Click to Browse";
+                        uploadText.classList.remove('file-selected');
+                        dropZone.style.borderColor = '';
+                        dropZone.style.background = '';
+                    }, 300);
+                }, 1500);
+            }, 1500);
+        });
+
+        // --- AUTH MODAL ---
+        const authBtn = document.getElementById('authBtn');
+        const loginModalClose = document.querySelector('#loginModal .close-modal');
+        const loginForm = document.getElementById('loginForm');
+        const signupForm = document.getElementById('signupForm');
+        const authTabs = document.querySelectorAll('.auth-tab');
+
+        authBtn.addEventListener('click', () => toggleModalById('loginModal', true));
+        loginModalClose.addEventListener('click', () => toggleModalById('loginModal', false));
+
+        // Tab Switching
+        authTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                // Remove active from all tabs and forms
+                authTabs.forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+                
+                // Add active to clicked tab
+                tab.classList.add('active');
+                
+                // Show corresponding form
+                const targetId = tab.getAttribute('data-tab') + 'Form';
+                document.getElementById(targetId).classList.add('active');
+            });
+        });
+
+        // Login Simulation
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const btn = loginForm.querySelector('button');
+            const originalText = btn.innerHTML;
+            
+            btn.innerHTML = 'AUTHENTICATING...';
+            btn.disabled = true;
+            
+            setTimeout(() => {
+                btn.innerHTML = 'ACCESS GRANTED';
+                btn.style.background = 'var(--status-safe)';
+                setTimeout(() => {
+                     toggleModalById('loginModal', false);
+                     // Change Nav Button to User Initials
+                     authBtn.innerHTML = 'JD';
+                     authBtn.style.borderRadius = '50%';
+                     authBtn.style.width = '32px';
+                     authBtn.style.height = '32px';
+                     authBtn.style.padding = '0';
+                     authBtn.onclick = null; // Disable modal open on logged in state
+                }, 1000);
+            }, 1500);
+        });
+
+        // Signup Simulation
+        signupForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const btn = signupForm.querySelector('button');
+            
+            btn.innerHTML = 'PROCESSING REQUEST...';
+            btn.disabled = true;
+            
+            setTimeout(() => {
+                btn.innerHTML = 'REGISTRATION PENDING APPROVAL';
+                btn.style.color = 'var(--status-safe)';
+                btn.style.borderColor = 'var(--status-safe)';
+                setTimeout(() => {
+                     toggleModalById('loginModal', false);
+                }, 1500);
+            }, 1500);
+        });
+
+        // Scroll Animations
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = 1;
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.step-card, .pricing-card, .tech-layer, .faq-item').forEach(el => {
+            el.style.opacity = 0;
+            el.style.transform = 'translateY(20px)';
+            el.style.transition = 'all 0.4s ease-out';
+            observer.observe(el);
+        });
+
+        // Parallax Skyline Script
+        window.addEventListener('scroll', () => {
+            const scrollY = window.scrollY;
+            
+            // Handle multiple skyline instances (Hero + Pricing)
+            const cityContainers = document.querySelectorAll('.blueprint-city');
+            
+            cityContainers.forEach(container => {
+                // Check if this container is somewhat visible to optimize performance
+                const rect = container.getBoundingClientRect();
+                if (rect.top < window.innerHeight && rect.bottom > 0) {
+                    const mountains = container.querySelector('.layer-mountains');
+                    const buildings = container.querySelector('.layer-buildings');
+                    const bridges = container.querySelector('.layer-bridges');
+
+                    if (mountains && buildings && bridges) {
+                        // Adjust speed factors (0.1, 0.3, 0.5)
+                        // Using rect.top creates a parallax effect relative to viewport position
+                        const offset = (window.innerHeight - rect.top) * 0.5;
+                        
+                        mountains.style.transform = `translateX(${offset * 0.1}px)`;
+                        buildings.style.transform = `translateX(${offset * 0.2}px)`;
+                        bridges.style.transform = `translateX(${offset * 0.4}px)`;
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
