@@ -1,7 +1,67 @@
-StructIQ is an AI-driven platform designed for predictive infrastructure monitoring. By converting complex concrete and structural data into actionable maintenance timelines, StructIQ helps cities and organizations transition from reactive repairs to proactive, predictive prevention.
-System v1.0.4 provides a structural intelligence interface that monitors civil infrastructure in real-time. The platform uses multi-sensor fusion to track critical parameters like load, vibration, and temperature to provide a comprehensive health score for assets like bridges and buildings.
-Live Asset Diagnostics: Real-time monitoring of assets (e.g., Asset ID-402) with live feeds for Load, Vibration (g), and Temperature (°C).
-Deep Analysis: Automated health scoring (0-100) based on structural integrity, load capacity, and material degradation.
-AI-Driven Insights: Automated detection of issues like stress fractures using sensor data fusion.
-Citizen Reporting Portal: A specialized mobile-optimized interface for the public to report infrastructure issues, featuring automated scanning and immediate AI results.
-CAD-Inspired UI: A high-performance, dark-themed interface featuring parallax "blueprint" visualizations of urban environments.
+# StructIQ
+
+A predictive infrastructure-monitoring prototype for exploring asset health,
+maintenance priority, citizen reports, and simulated environmental impact. The
+project combines a FastAPI service with a SQLite data layer and browser-based
+monitoring interfaces.
+
+## Features
+
+- Asset registry for bridges, roads, and flyovers
+- Age-based health scoring and maintenance prioritization
+- Citizen report workflow with prototype image-triage simulation
+- Flood-impact simulation for road assets
+- Maintenance and report-resolution actions
+- Demo data for representative Chennai infrastructure
+
+## Stack
+
+- Python and FastAPI
+- SQLAlchemy and SQLite
+- Pydantic
+- HTML, CSS, and JavaScript
+- Bootstrap, Chart.js, and Leaflet
+
+## Run the API
+
+Requirements: Python 3.10 or newer.
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn main:app --reload
+```
+
+The API is available at `http://127.0.0.1:8000`. Interactive API documentation
+is available at `http://127.0.0.1:8000/docs`.
+
+To load the demonstration assets, request:
+
+```text
+GET http://127.0.0.1:8000/setup-demo
+```
+
+Serve the HTML files with a local static server when testing the browser
+interfaces:
+
+```bash
+python -m http.server 8080
+```
+
+## Main endpoints
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/assets` | List monitored assets |
+| `POST` | `/assets` | Add an asset and calculate its initial health |
+| `GET` | `/reports` | List citizen reports |
+| `POST` | `/reports/upload-ai` | Run the prototype report-triage flow |
+| `POST` | `/weather/trigger-flood` | Simulate flood impact on road assets |
+| `POST` | `/assets/{asset_id}/maintenance` | Record a maintenance improvement |
+
+## Scope
+
+StructIQ is a demonstration prototype, not a production structural-safety
+system. Its health scores and image-triage results are simulated heuristics and
+must not be used for engineering, maintenance, or emergency decisions.

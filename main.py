@@ -1,5 +1,6 @@
 import random
 import uuid
+from datetime import datetime
 from fastapi import FastAPI, Depends, HTTPException, File, UploadFile, Form
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -14,7 +15,7 @@ app = FastAPI(title="StructIQ AI Engine : Chennai")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -56,7 +57,7 @@ def get_reports(db: Session = Depends(get_db)):
 @app.post("/assets")
 def create_asset(asset: AssetCreate, db: Session = Depends(get_db)):
     """Manually adds a new asset with age-calculated health."""
-    current_year = 2026
+    current_year = datetime.now().year
     calculated_age = current_year - asset.construction_year
     
     # Roads decay 3x faster than Bridges
@@ -91,15 +92,16 @@ async def upload_ai_report(
     file: UploadFile = File(...), 
     db: Session = Depends(get_db)
 ):
-    """AI Crack Detection + Fraud Security Layer"""
-    filename_check = file.filename.lower()
+    """Simulates image-based crack triage for the prototype workflow."""
+    filename_check = (file.filename or "").lower()
     if any(word in filename_check for word in ["google", "download", "stock", "wallpaper"]):
         raise HTTPException(status_code=400, detail="FRAUD DETECTED: Image source is not original.")
 
     asset = db.query(database.Asset).filter(database.Asset.id == asset_id).first()
     if not asset: raise HTTPException(status_code=404, detail="Asset ID not found.")
 
-    ai_severity = random.choice([5, 10, 15]) 
+    # Prototype-only simulation. Replace with a validated model before real use.
+    ai_severity = random.choice([5, 10, 15])
     labels = {5: "Minor Hairline", 10: "Significant Surface", 15: "Critical Structural"}
     ai_label = labels[ai_severity]
     
@@ -175,7 +177,7 @@ def setup_demo(db: Session = Depends(get_db)):
     for data in demo_assets:
         existing = db.query(database.Asset).filter(database.Asset.name == data["name"]).first()
         if not existing:
-            current_year = 2026
+            current_year = datetime.now().year
             age = current_year - data["construction_year"]
             
             # Custom Logic: Napier is old but well maintained
