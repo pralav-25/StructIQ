@@ -1,11 +1,10 @@
 import random
-import uuid
-from datetime import datetime
 from fastapi import FastAPI, Depends, HTTPException, File, UploadFile, Form
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 import database  # Assumes database.py contains Asset and Report models
+from scoring import calculate_health, maintenance_priority
 
 # 1. INITIALIZE APP
 app = FastAPI(title="StructIQ AI Engine : Chennai")
@@ -38,10 +37,6 @@ class AssetCreate(BaseModel):
     latitude: float
     longitude: float
 
-class AuthorityUpdate(BaseModel):
-    report_id: int
-    new_severity: int
-
 # 5. API ENDPOINTS
 
 @app.get("/assets")
@@ -57,17 +52,13 @@ def get_reports(db: Session = Depends(get_db)):
 @app.post("/assets")
 def create_asset(asset: AssetCreate, db: Session = Depends(get_db)):
     """Manually adds a new asset with age-calculated health."""
-    current_year = datetime.now().year
-    calculated_age = current_year - asset.construction_year
-    
-    # Roads decay 3x faster than Bridges
-    decay_rate = 3.0 if asset.asset_type == "Road" else 0.5
-    age_penalty = calculated_age * decay_rate
-    final_score = max(0.0, 100 - age_penalty)
-
-    prio = "Low"
-    if final_score < 40: prio = "Emergency"
-    elif final_score < 70: prio = "High"
+    try:
+        calculated_age, final_score, prio = calculate_health(
+            asset.asset_type,
+            asset.construction_year,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
 
     new_asset = database.Asset(
         name=asset.name, 
@@ -114,7 +105,7 @@ async def upload_ai_report(
     
     # AI Impact: Reduce health based on severity
     asset.health_score = max(0.0, asset.health_score - (ai_severity * 1.5))
-    if asset.health_score < 40: asset.maintenance_priority = "Emergency"
+    asset.maintenance_priority = maintenance_priority(asset.health_score)
     
     db.add(new_report)
     db.commit()
@@ -127,7 +118,7 @@ def trigger_flood_alert(db: Session = Depends(get_db)):
     roads = db.query(database.Asset).filter(database.Asset.asset_type == "Road").all()
     for road in roads:
         road.health_score = max(0.0, road.health_score - 15.0)
-        if road.health_score < 50: road.maintenance_priority = "High"
+        road.maintenance_priority = maintenance_priority(road.health_score)
     db.commit()
     return {"status": "FLOOD ALERT ACTIVE", "affected_count": len(roads)}
 
@@ -140,7 +131,7 @@ def resolve_report(report_id: int, db: Session = Depends(get_db)):
     asset = db.query(database.Asset).filter(database.Asset.id == report.asset_id).first()
     if asset:
         asset.health_score = min(100, asset.health_score + (report.severity * 1.5))
-        if asset.health_score >= 70: asset.maintenance_priority = "Low"
+        asset.maintenance_priority = maintenance_priority(asset.health_score)
     
     db.delete(report)
     db.commit()
@@ -151,9 +142,9 @@ def perform_maintenance(asset_id: int, db: Session = Depends(get_db)):
     """FEATURE: Admin manually boosts health after repair."""
     asset = db.query(database.Asset).filter(database.Asset.id == asset_id).first()
     if not asset: raise HTTPException(status_code=404)
-    
+
     asset.health_score = min(100.0, asset.health_score + 20.0)
-    if asset.health_score >= 70: asset.maintenance_priority = "Low"
+    asset.maintenance_priority = maintenance_priority(asset.health_score)
     
     db.commit()
     return {"new_health": asset.health_score, "status": "Maintenance logged"}
@@ -177,20 +168,19 @@ def setup_demo(db: Session = Depends(get_db)):
     for data in demo_assets:
         existing = db.query(database.Asset).filter(database.Asset.name == data["name"]).first()
         if not existing:
-            current_year = datetime.now().year
-            age = current_year - data["construction_year"]
-            
-            # Custom Logic: Napier is old but well maintained
+            age, h_score, prio = calculate_health(
+                data["asset_type"],
+                data["construction_year"],
+            )
+
+            demo_floor = 15.0 if data["asset_type"] == "Road" else 20.0
+            h_score = max(demo_floor, h_score)
+            prio = maintenance_priority(h_score)
+
+            # Demo exception: Napier is old but represented as well maintained.
             if data["name"] == "Napier Bridge":
                 h_score = 92.5
-            elif data["asset_type"] == "Road":
-                h_score = max(15.0, 100.0 - (age * 3.0))
-            else:
-                h_score = max(20.0, 100.0 - (age * 0.5))
-
-            prio = "Low"
-            if h_score < 40: prio = "Emergency"
-            elif h_score < 70: prio = "High"
+                prio = maintenance_priority(h_score)
 
             new_asset = database.Asset(
                 **data, age=age, health_score=round(h_score, 1),
