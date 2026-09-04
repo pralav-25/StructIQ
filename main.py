@@ -1,9 +1,9 @@
 import random
 from fastapi import FastAPI, Depends, HTTPException, File, UploadFile, Form
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 import database  # Assumes database.py contains Asset and Report models
+from schemas import AssetCreate
 from scoring import calculate_health, maintenance_priority
 
 # 1. INITIALIZE APP
@@ -28,14 +28,6 @@ def get_db():
         yield db
     finally:
         db.close()
-
-# 4. REQUEST SCHEMAS
-class AssetCreate(BaseModel):
-    name: str
-    asset_type: str
-    construction_year: int
-    latitude: float
-    longitude: float
 
 # 5. API ENDPOINTS
 
