@@ -8,6 +8,7 @@ monitoring interfaces.
 ## Features
 
 - Asset registry for bridges, roads, and flyovers
+- API validation for asset names, types, construction years, and coordinates
 - Age-based health scoring and maintenance prioritization
 - Citizen report workflow with prototype image-triage simulation
 - Flood-impact simulation for road assets
