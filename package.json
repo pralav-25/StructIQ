@@ -1,0 +1,10 @@
+{
+  "name": "structiq-browser-tests",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/test_rendering.cjs"
+  },
+  "devDependencies": {
+    "playwright": "1.62.1"
+  }
+}

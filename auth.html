@@ -212,7 +212,7 @@ async function loadAssets() {
         const assets = await res.json();
         document.getElementById('asset-count').innerText = assets.length;
         const listDiv = document.getElementById('asset-list');
-        listDiv.innerHTML = '';
+        listDiv.replaceChildren();
         
         markers.forEach(m => map.removeLayer(m));
         markers = [];
@@ -222,26 +222,43 @@ async function loadAssets() {
             if (a.health_score < 40) statusColor = '#ef4444'; 
             else if (a.health_score < 75) statusColor = '#f59e0b'; 
 
-            listDiv.innerHTML += `
-                <div class="asset-card p-3 rounded mb-2" style="border-left: 6px solid ${statusColor}">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <span class="fw-bold small text-info" onclick="showGraph('${a.name}')" style="cursor:pointer; text-decoration: underline;">${a.name}</span>
-                        <span class="badge bg-dark border border-secondary" style="font-size:0.6rem;">${a.asset_type}</span>
-                    </div>
-                    <div class="progress mb-2">
-                        <div class="progress-bar" style="width: ${a.health_score}%; background-color: ${statusColor}"></div>
-                    </div>
-                    <div class="d-flex justify-content-between opacity-75 mb-2" style="font-size:0.7rem; font-family: var(--font-mono);">
-                        <span>HEALTH: ${a.health_score.toFixed(1)}%</span>
-                        <span>ID: #${a.id}</span>
-                    </div>
-                    <button onclick="repairAsset(${a.id})" class="btn btn-sm btn-outline-success w-100 py-0" style="font-size: 10px;">INITIATE REPAIR</button>
-                </div>`;
-            
+            const card = document.createElement('div');
+            card.className = 'asset-card p-3 rounded mb-2';
+            card.style.borderLeft = `6px solid ${statusColor}`;
+            // Only static markup belongs in this template. API values use textContent.
+            card.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <button type="button" class="asset-name btn btn-link p-0 text-start fw-bold small text-info"></button>
+                    <span class="asset-type badge bg-dark border border-secondary" style="font-size:0.6rem;"></span>
+                </div>
+                <div class="progress mb-2">
+                    <div class="progress-bar"></div>
+                </div>
+                <div class="d-flex justify-content-between opacity-75 mb-2" style="font-size:0.7rem; font-family: var(--font-mono);">
+                    <span class="asset-health"></span>
+                    <span class="asset-id"></span>
+                </div>
+                <button type="button" class="repair-asset btn btn-sm btn-outline-success w-100 py-0" style="font-size: 10px;">INITIATE REPAIR</button>`;
+            const nameButton = card.querySelector('.asset-name');
+            nameButton.textContent = a.name;
+            nameButton.addEventListener('click', () => showGraph(a.name));
+            card.querySelector('.asset-type').textContent = a.asset_type;
+            card.querySelector('.asset-health').textContent = `HEALTH: ${a.health_score.toFixed(1)}%`;
+            card.querySelector('.asset-id').textContent = `ID: #${a.id}`;
+            const progressBar = card.querySelector('.progress-bar');
+            progressBar.style.width = `${a.health_score}%`;
+            progressBar.style.backgroundColor = statusColor;
+            card.querySelector('.repair-asset').addEventListener('click', () => repairAsset(a.id));
+            listDiv.append(card);
+
+            const popup = document.createElement('div');
+            const popupName = document.createElement('b');
+            popupName.textContent = a.name;
+            popup.append(popupName, document.createElement('br'), `Health: ${a.health_score.toFixed(1)}%`);
             const m = L.circleMarker([a.latitude, a.longitude], {
                 radius: 10, color: 'white', weight: 2, fillColor: statusColor, fillOpacity: 0.9
-            }).addTo(map).bindPopup(`<b>${a.name}</b><br>Health: ${a.health_score.toFixed(1)}%`);
-            
+            }).addTo(map).bindPopup(popup);
+
             if (a.health_score < 40) { m.getElement()?.classList.add('emergency-mode'); }
             markers.push(m);
         });
@@ -258,15 +275,25 @@ async function fetchIncidents() {
         const res = await fetch(`${API_URL}/reports`);
         const reports = await res.json();
         const feed = document.getElementById('incident-feed');
-        if (reports.length > 0) {
-            feed.innerHTML = '';
-            reports.reverse().slice(0, 8).forEach(rep => {
-                feed.innerHTML += `
-                    <div class="ticket-log">
-                        [${new Date().toLocaleTimeString()}] REPORT #${rep.id}<br>
-                        > ASSET: ${rep.asset_id} | SEV: ${rep.severity}<br>
-                        > ${rep.description}<br>
-                    </div>`;
+        feed.replaceChildren();
+        if (reports.length === 0) {
+            const emptyState = document.createElement('div');
+            emptyState.className = 'text-muted';
+            emptyState.textContent = 'No open reports.';
+            feed.append(emptyState);
+        } else {
+            reports.slice(-8).reverse().forEach(rep => {
+                const entry = document.createElement('div');
+                entry.className = 'ticket-log';
+                entry.append(
+                    `[${new Date().toLocaleTimeString()}] REPORT #${rep.id}`,
+                    document.createElement('br'),
+                    `> ASSET: ${rep.asset_id} | SEV: ${rep.severity}`,
+                    document.createElement('br'),
+                    `> ${rep.description}`,
+                    document.createElement('br'),
+                );
+                feed.append(entry);
             });
         }
     } catch(e) { }
