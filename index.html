@@ -1300,10 +1300,10 @@ async function loadAssetsForCitizen() {
         const assets = await res.json();
         const select = document.getElementById('assetSelect');
         
-        select.innerHTML = '<option value="">Select Bridge or Road...</option>';
+        select.replaceChildren(new Option('Select Bridge or Road...', ''));
         assets.forEach(asset => {
             // Citizen sees name, backend gets ID
-            select.innerHTML += `<option value="${asset.id}">${asset.name}</option>`;
+            select.add(new Option(asset.name, String(asset.id)));
         });
     } catch (e) {
         console.error("Failed to load assets", e);

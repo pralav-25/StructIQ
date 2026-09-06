@@ -61,6 +61,28 @@ python -m http.server 8080
 | `POST` | `/weather/trigger-flood` | Simulate flood impact on road assets |
 | `POST` | `/assets/{asset_id}/maintenance` | Record a maintenance improvement |
 
+## Tests
+
+Run the Python validation and scoring tests after installing the API dependencies:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+For browser regression tests, install Node.js 24 and run:
+
+```bash
+npm ci
+npx playwright install chromium
+npm test
+```
+
+The browser tests use mocked API responses and map dependencies; no running API,
+database, or external CDN is needed during the tests. They check that asset names
+and reports render as literal text, quoted names keep their chart controls,
+repairs target the correct asset, and resolved reports leave the incident feed.
+GitHub Actions runs both suites on pull requests and pushes to `main`.
+
 ## Scope
 
 StructIQ is a demonstration prototype, not a production structural-safety
