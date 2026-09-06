@@ -151,3 +151,84 @@ test('the citizen selector preserves names and IDs without parsing options from 
         await page.evaluate(() => loadAssetsForCitizen());
     }
 });
+
+async function prepareReport(t) {
+    const { page } = await openPage(t, 'index.html', [asset(1, 'Adyar Bridge')]);
+    page.on('dialog', dialog => dialog.dismiss());
+    await page.locator('#reportBtn').click();
+    await page.selectOption('#incidentType', 'crack');
+    await page.selectOption('#assetSelect', '1');
+    await page.locator('#description').fill('Crack near the east railing');
+    await page.locator('#fileInput').setInputFiles({
+        name: 'bridge.png', mimeType: 'image/png', buffer: Buffer.from('test image'),
+    });
+    return page;
+}
+
+test('pending reports cannot show success or submit a second request', async t => {
+    const page = await prepareReport(t);
+    await page.clock.install();
+    const pending = [];
+    await page.route('**/reports/upload-ai', route => { pending.push(route); });
+    const firstRequest = page.waitForRequest('**/reports/upload-ai');
+    await page.locator('#reportForm button[type="submit"]').click();
+    await firstRequest;
+    await page.clock.fastForward(4000);
+    assert.equal(await page.locator('#reportModal').isVisible(), true);
+    assert.equal(await page.locator('#reportForm button[type="submit"]').isDisabled(), true);
+    assert.equal(await page.locator('#description').inputValue(), 'Crack near the east railing');
+    assert.ok(!(await page.locator('#reportForm').textContent()).includes('REPORT LOGGED'));
+    await page.evaluate(() => document.getElementById('reportForm').requestSubmit());
+    // Flush the browser's network work without relying on wall-clock sleeps.
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)));
+    assert.equal(pending.length, 1);
+    await pending[0].fulfill({ json: { report_id: 7, analysis: 'Significant Surface', severity: 10 } });
+    await page.waitForFunction(() => !document.querySelector('#reportForm button[type="submit"]').disabled);
+});
+
+test('successful reports reset the form and allow the modal to reopen', async t => {
+    const page = await prepareReport(t);
+    await page.route('**/reports/upload-ai', route => route.fulfill({
+        json: { report_id: 7, analysis: 'Significant Surface', severity: 10 },
+    }));
+    await page.locator('#reportForm button[type="submit"]').click();
+    await page.waitForFunction(() => !document.querySelector('#reportModal').classList.contains('active'));
+    assert.equal(await page.locator('#description').inputValue(), '');
+    assert.equal(await page.locator('#fileInput').inputValue(), '');
+    assert.equal(await page.locator('#uploadText').textContent(), 'Drop Photo or Click to Browse');
+    assert.equal(await page.evaluate(() => document.body.style.overflow), '');
+    await page.locator('#reportBtn').click();
+    assert.equal(await page.locator('#reportModal').isVisible(), true);
+    assert.equal(await page.locator('#reportForm button[type="submit"]').isEnabled(), true);
+});
+
+for (const failure of ['http', 'network']) {
+    test(`${failure} failures preserve the report and allow retry`, async t => {
+        const page = await prepareReport(t);
+        let attempts = 0;
+        await page.route('**/reports/upload-ai', route => {
+            attempts++;
+            if (attempts > 1) return route.fulfill({
+                json: { report_id: 8, analysis: 'Minor Hairline', severity: 5 },
+            });
+            return failure === 'network' ? route.abort('failed') : route.fulfill({
+                status: 400, json: { detail: '<b>Image source is not original.</b>' },
+            });
+        });
+        await page.locator('#reportForm button[type="submit"]').click();
+        await page.locator('#reportStatus').waitFor({ state: 'visible', timeout: 3000 });
+        await page.waitForFunction(() => !document.querySelector('#reportForm button[type="submit"]').disabled);
+        assert.equal(await page.locator('#reportModal').isVisible(), true);
+        assert.equal(await page.locator('#description').inputValue(), 'Crack near the east railing');
+        assert.equal(await page.locator('#fileInput').evaluate(input => input.files[0].name), 'bridge.png');
+        if (failure === 'http') {
+            assert.ok((await page.locator('#reportStatus').textContent()).includes('<b>Image source is not original.</b>'));
+            assert.equal(await page.locator('#reportStatus b').count(), 0);
+        } else {
+            assert.ok((await page.locator('#reportStatus').textContent()).includes('connection'));
+        }
+        await page.locator('#reportForm button[type="submit"]').click();
+        await page.waitForFunction(() => !document.querySelector('#reportModal').classList.contains('active'));
+        assert.equal(attempts, 2);
+    });
+}

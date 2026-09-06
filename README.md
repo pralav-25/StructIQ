@@ -81,6 +81,8 @@ The browser tests use mocked API responses and map dependencies; no running API,
 database, or external CDN is needed during the tests. They check that asset names
 and reports render as literal text, quoted names keep their chart controls,
 repairs target the correct asset, and resolved reports leave the incident feed.
+Submission tests cover delayed responses, duplicate attempts, successful form
+reset, and preserving input for retries after API or network failures.
 GitHub Actions runs both suites on pull requests and pushes to `main`.
 
 ## Scope

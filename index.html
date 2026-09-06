@@ -1033,6 +1033,8 @@
                 <textarea class="form-textarea" id="description" rows="3" placeholder="Describe visible damage patterns for AI verification..." required></textarea>
             </div>
 
+            <p id="reportStatus" role="status" aria-live="polite" hidden></p>
+
             <button type="submit" class="btn btn-primary" style="width: 100%; background: var(--status-critical); border-color: var(--status-critical);">SUBMIT FOR AI ANALYSIS</button>
         </form>
     </div>
@@ -1144,39 +1146,6 @@
                 }
             });
         }
-
-        // Report Form Submit
-        reportForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const btn = reportForm.querySelector('button[type="submit"]');
-            const originalText = btn.innerHTML;
-            
-            btn.innerHTML = 'UPLOADING DATA PACKET...';
-            btn.style.opacity = '0.7';
-            btn.disabled = true;
-            
-            setTimeout(() => {
-                btn.innerHTML = '✔ REPORT LOGGED';
-                btn.style.background = 'var(--status-safe)';
-                btn.style.borderColor = 'var(--status-safe)';
-                
-                setTimeout(() => {
-                    toggleModalById('reportModal', false);
-                    setTimeout(() => {
-                        btn.innerHTML = originalText;
-                        btn.style.background = 'var(--status-critical)';
-                        btn.style.borderColor = 'var(--status-critical)';
-                        btn.style.opacity = '1';
-                        btn.disabled = false;
-                        reportForm.reset();
-                        uploadText.textContent = "Drop Photo/Video or Click to Browse";
-                        uploadText.classList.remove('file-selected');
-                        dropZone.style.borderColor = '';
-                        dropZone.style.background = '';
-                    }, 300);
-                }, 1500);
-            }, 1500);
-        });
 
         // --- AUTH MODAL ---
         const authBtn = document.getElementById('authBtn');
@@ -1310,41 +1279,62 @@ async function loadAssetsForCitizen() {
     }
 }
 
-// --- CONNECT: Handle the Submit Button ---
-document.getElementById('reportForm').onsubmit = async (e) => {
+// Keep submission feedback tied to the API response.
+let reportSubmissionPending = false;
+reportForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    
-    const assetId = document.getElementById('assetSelect').value;
-    const file = document.getElementById('fileInput').files[0];
-    const description = document.querySelector('.form-textarea').value;
+    if (reportSubmissionPending || !reportForm.reportValidity()) return;
 
-    if(!assetId || !file) {
-        alert("Please select a location and upload an image.");
-        return;
-    }
-
+    const btn = reportForm.querySelector('button[type="submit"]');
+    const status = document.getElementById('reportStatus');
+    const originalText = btn.textContent;
     const formData = new FormData();
-    formData.append('asset_id', assetId);
-    formData.append('description', description);
-    formData.append('file', file);
+    formData.append('asset_id', document.getElementById('assetSelect').value);
+    formData.append('description', document.getElementById('description').value);
+    formData.append('file', fileInput.files[0]);
+
+    reportSubmissionPending = true;
+    reportForm.setAttribute('aria-busy', 'true');
+    btn.disabled = true;
+    btn.textContent = 'SUBMITTING REPORT...';
+    status.hidden = false;
+    status.textContent = 'Submitting your report. Please wait for confirmation.';
 
     try {
         const res = await fetch(`${API_URL}/reports/upload-ai`, {
             method: 'POST',
             body: formData
         });
+        const data = await res.json().catch(() => ({}));
 
-        if(res.ok) {
-            const data = await res.json();
-            alert(`Report Accepted! AI Severity: ${data.analysis}`);
-            document.getElementById('reportModal').style.display = 'none';
-        } else {
-            alert("Submission failed. Check backend connection.");
+        if (!res.ok) {
+            status.textContent = typeof data?.detail === 'string'
+                ? `Submission failed: ${data.detail}`
+                : 'Submission failed. Please try again.';
+            return;
         }
+
+        alert(typeof data?.analysis === 'string'
+            ? `Report accepted! AI severity: ${data.analysis}`
+            : 'Report accepted! Your report was saved.');
+        reportForm.reset();
+        uploadText.textContent = 'Drop Photo or Click to Browse';
+        uploadText.classList.remove('file-selected');
+        dropZone.style.borderColor = '';
+        dropZone.style.background = '';
+        status.textContent = '';
+        status.hidden = true;
+        toggleModalById('reportModal', false);
     } catch (err) {
-        console.error(err);
+        console.error('Report submission failed', err);
+        status.textContent = 'Unable to submit your report. Check your connection and try again.';
+    } finally {
+        reportSubmissionPending = false;
+        reportForm.removeAttribute('aria-busy');
+        btn.disabled = false;
+        btn.textContent = originalText;
     }
-};
+});
 
 // Initialize the dropdown when page loads
 window.addEventListener('DOMContentLoaded', loadAssetsForCitizen);
