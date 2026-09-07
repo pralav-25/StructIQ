@@ -3,3 +3,8 @@ __pycache__/
 .env
 .venv/
 venv/
+.data/
+.vercel/
+.pytest_cache/
+.ruff_cache/
+node_modules/

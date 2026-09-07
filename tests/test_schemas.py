@@ -4,7 +4,6 @@ from pydantic import ValidationError
 
 from schemas import AssetCreate
 
-
 VALID_ASSET = {
     "name": "Adyar Bridge",
     "asset_type": "Bridge",

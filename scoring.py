@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Optional, Tuple
 
 
 def maintenance_priority(health_score: float) -> str:
@@ -15,8 +14,8 @@ def calculate_health(
     asset_type: str,
     construction_year: int,
     *,
-    current_year: Optional[int] = None,
-) -> Tuple[int, float, str]:
+    current_year: int | None = None,
+) -> tuple[int, float, str]:
     """Calculate age, health score, and priority for a new asset."""
     year = current_year or datetime.now().year
     if construction_year <= 0 or construction_year > year:
