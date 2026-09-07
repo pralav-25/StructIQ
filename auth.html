@@ -255,12 +255,12 @@ async function repairAsset(assetId) {
 
 async function fetchIncidents() {
     try {
-        const res = await fetch(`${API_URL}/reports`);
+        const res = await fetch(`${API_URL}/reports?status=Open`);
         const reports = await res.json();
         const feed = document.getElementById('incident-feed');
         if (reports.length > 0) {
             feed.innerHTML = '';
-            reports.reverse().slice(0, 8).forEach(rep => {
+            reports.slice(0, 8).forEach(rep => {
                 feed.innerHTML += `
                     <div class="ticket-log">
                         [${new Date().toLocaleTimeString()}] REPORT #${rep.id}<br>
