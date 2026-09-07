@@ -1,5 +1,5 @@
 import random
-from fastapi import FastAPI, Depends, HTTPException, File, UploadFile, Form
+from fastapi import FastAPI, Depends, HTTPException, File, UploadFile, Form, Query
 from sqlalchemy.orm import Session
 from fastapi.middleware.cors import CORSMiddleware
 import database  # Assumes database.py contains Asset and Report models
@@ -37,9 +37,12 @@ def get_assets(db: Session = Depends(get_db)):
     return db.query(database.Asset).all()
 
 @app.get("/reports")
-def get_reports(db: Session = Depends(get_db)):
+def get_reports(status: str | None = Query(None, pattern="^(Open|Resolved)$"), db: Session = Depends(get_db)):
     """Fetches all citizen reports for the Incident Feed."""
-    return db.query(database.Report).all()
+    query = db.query(database.Report)
+    if status is not None:
+        query = query.filter(database.Report.status == status)
+    return query.order_by(database.Report.id.desc()).all()
 
 @app.post("/assets")
 def create_asset(asset: AssetCreate, db: Session = Depends(get_db)):
@@ -71,14 +74,22 @@ def create_asset(asset: AssetCreate, db: Session = Depends(get_db)):
 @app.post("/reports/upload-ai")
 async def upload_ai_report(
     asset_id: int = Form(...), 
-    description: str = Form(...), 
+    description: str = Form(..., min_length=1, max_length=2000),
     file: UploadFile = File(...), 
     db: Session = Depends(get_db)
 ):
     """Simulates image-based crack triage for the prototype workflow."""
-    filename_check = (file.filename or "").lower()
-    if any(word in filename_check for word in ["google", "download", "stock", "wallpaper"]):
-        raise HTTPException(status_code=400, detail="FRAUD DETECTED: Image source is not original.")
+    description = description.strip()
+    if not description:
+        raise HTTPException(status_code=422, detail="Description must not be blank.")
+    if file.content_type not in {"image/jpeg", "image/png", "image/webp"}:
+        raise HTTPException(status_code=415, detail="Use a JPEG, PNG, or WebP image.")
+    content = await file.read(5 * 1024 * 1024 + 1)
+    await file.close()
+    if not content:
+        raise HTTPException(status_code=422, detail="Image must not be empty.")
+    if len(content) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Image exceeds the 5 MB limit.")
 
     asset = db.query(database.Asset).filter(database.Asset.id == asset_id).first()
     if not asset: raise HTTPException(status_code=404, detail="Asset ID not found.")
@@ -90,7 +101,7 @@ async def upload_ai_report(
     
     new_report = database.Report(
         asset_id=asset_id,
-        description=f"AI SCAN [{ai_label}]: {description}",
+        description=f"SIMULATED TRIAGE [{ai_label}]: {description}",
         severity=ai_severity,
         status="Open"
     )
@@ -102,7 +113,7 @@ async def upload_ai_report(
     db.add(new_report)
     db.commit()
     db.refresh(new_report)
-    return {"report_id": new_report.id, "analysis": ai_label, "severity": ai_severity}
+    return {"report_id": new_report.id, "analysis": ai_label, "severity": ai_severity, "simulated": True}
 
 @app.post("/weather/trigger-flood")
 def trigger_flood_alert(db: Session = Depends(get_db)):
@@ -116,18 +127,21 @@ def trigger_flood_alert(db: Session = Depends(get_db)):
 
 @app.post("/reports/{report_id}/resolve")
 def resolve_report(report_id: int, db: Session = Depends(get_db)):
-    """Deletes a report and restores health."""
+    """Retain the report and restore health only on its first resolution."""
     report = db.query(database.Report).filter(database.Report.id == report_id).first()
     if not report: raise HTTPException(status_code=404)
     
+    if report.status == "Resolved":
+        return {"status": "success", "report_id": report.id, "already_resolved": True}
+
     asset = db.query(database.Asset).filter(database.Asset.id == report.asset_id).first()
     if asset:
         asset.health_score = min(100, asset.health_score + (report.severity * 1.5))
         asset.maintenance_priority = maintenance_priority(asset.health_score)
     
-    db.delete(report)
+    report.status = "Resolved"
     db.commit()
-    return {"status": "success"}
+    return {"status": "success", "report_id": report.id, "already_resolved": False}
 
 @app.post("/assets/{asset_id}/maintenance")
 def perform_maintenance(asset_id: int, db: Session = Depends(get_db)):
@@ -142,7 +156,7 @@ def perform_maintenance(asset_id: int, db: Session = Depends(get_db)):
     return {"new_health": asset.health_score, "status": "Maintenance logged"}
 
 # --- JUDGES DEMO SETUP ROUTE ---
-@app.get("/setup-demo")
+@app.post("/setup-demo")
 def setup_demo(db: Session = Depends(get_db)):
     """Seeds the database with 9 realistic Chennai landmarks."""
     demo_assets = [
