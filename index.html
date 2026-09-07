@@ -1,22 +1,44 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#102c31">
-  <meta name="description" content="Explore infrastructure maintenance with private workspaces, asset maps, citizen reports, and a complete resolution history.">
-  <title>StructIQ — Infrastructure, understood.</title>
-  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/vendor/leaflet.css">
-  <link rel="stylesheet" href="/static/styles.css">
-  <script defer src="/static/vendor/leaflet.js"></script>
-  <script type="module" src="/static/app.js"></script>
-</head>
-<body>
-  <a class="skip-link" href="#main">Skip to content</a>
-  <div id="root"><main id="main" class="initial"><span class="brand">Struct<span>IQ</span></span><p>Opening your workspace…</p></main></div>
-  <div id="toast" role="status" aria-live="polite" hidden></div>
-  <dialog id="modal" aria-labelledby="modal-title"><div class="dialog-head"><h2 id="modal-title"></h2><button class="icon-button" id="close-modal" aria-label="Close dialog">×</button></div><div id="modal-body"></div></dialog>
-  <noscript><p class="notice">JavaScript is required for the dashboard. You can still read the <a href="/docs">API documentation</a> or <a href="https://github.com/pralav-25/StructIQ">project source</a>.</p></noscript>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#102c31" />
+    <meta
+      name="description"
+      content="Explore infrastructure maintenance with private workspaces, asset maps, citizen reports, and a complete resolution history."
+    />
+    <title>StructIQ — Infrastructure, understood.</title>
+    <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/static/vendor/leaflet.css" />
+    <link rel="stylesheet" href="/static/styles.css" />
+    <script defer src="/static/vendor/leaflet.js"></script>
+    <script type="module" src="/static/app.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div id="root">
+      <main id="main" class="initial">
+        <span class="brand">Struct<span>IQ</span></span>
+        <p>Opening your workspace…</p>
+      </main>
+    </div>
+    <div id="toast" role="status" aria-live="polite" hidden></div>
+    <dialog id="modal" aria-labelledby="modal-title">
+      <div class="dialog-head">
+        <h2 id="modal-title"></h2>
+        <button class="icon-button" id="close-modal" aria-label="Close dialog">
+          ×
+        </button>
+      </div>
+      <div id="modal-body"></div>
+    </dialog>
+    <noscript
+      ><p class="notice">
+        JavaScript is required for the dashboard. You can still read the
+        <a href="/docs">API documentation</a> or
+        <a href="https://github.com/pralav-25/StructIQ">project source</a>.
+      </p></noscript
+    >
+  </body>
 </html>
