@@ -1,5 +1,7 @@
-fastapi
-pydantic
-python-multipart
-sqlalchemy
-uvicorn[standard]
+fastapi==0.141.1
+pydantic==2.13.5
+python-multipart==0.0.32
+sqlalchemy==2.0.52
+uvicorn[standard]==0.52.4
+Pillow==12.3.0
+psycopg[binary]==3.3.3
