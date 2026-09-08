@@ -16,7 +16,7 @@ from fastapi.staticfiles import StaticFiles
 from PIL import Image, ImageOps, UnidentifiedImageError
 from sqlalchemy import func, text
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 import database as dbm
 from schemas import ArchiveState, AssetCreate, Credentials, Note, Registration, Scenario
@@ -210,7 +210,7 @@ def iso(value):
 
 
 def report_data(db, report):
-    asset = db.get(dbm.Asset, report.asset_id)
+    asset = report.asset
     return {
         "id": report.id,
         "asset_id": report.asset_id,
@@ -219,7 +219,7 @@ def report_data(db, report):
         "severity": report.severity,
         "status": report.status,
         "tracking_code": report.tracking_code,
-        "has_image": bool(report.image),
+        "has_image": bool(report.has_image),
         "resolution_note": report.resolution_note,
         "created_at": iso(report.created_at),
         "resolved_at": iso(report.resolved_at),
@@ -410,7 +410,11 @@ def reports(
     account=Depends(workspace),
     db: Session = Depends(get_db),
 ):
-    query = db.query(dbm.Report).filter_by(workspace_id=account.id)
+    query = (
+        db.query(dbm.Report)
+        .options(selectinload(dbm.Report.asset))
+        .filter_by(workspace_id=account.id)
+    )
     if status:
         query = query.filter_by(status=status)
     return [report_data(db, r) for r in query.order_by(dbm.Report.id.desc())]
@@ -607,7 +611,7 @@ def track(tracking_code: str, request: Request, db: Session = Depends(get_db)):
     owner = db.get(dbm.Workspace, report.workspace_id)
     if not owner or (owner.is_demo and owner.created_at < dbm.utcnow() - timedelta(days=7)):
         raise HTTPException(404, "This report has expired.")
-    asset = db.get(dbm.Asset, report.asset_id)
+    asset = report.asset
     return {
         "id": report.id,
         "asset_name": asset.name,
