@@ -65,6 +65,31 @@ class ApiTests(unittest.TestCase):
             a for a in self.client.get("/api/assets").json() if a["id"] == self.asset["id"]
         )["health_score"]
 
+    def test_report_summaries_do_not_load_photo_blobs(self):
+        from sqlalchemy import event, inspect
+
+        uploaded = self.upload().json()
+        with database.SessionLocal() as db:
+            report = db.get(database.Report, uploaded["id"])
+            self.assertTrue(report.has_image)
+            self.assertIn("image", inspect(report).unloaded)
+
+        statements = []
+        def capture(_conn, _cursor, statement, _params, _context, _many):
+            statements.append(statement)
+        event.listen(database.engine, "before_cursor_execute", capture)
+        try:
+            response = self.client.get("/api/reports")
+        finally:
+            event.remove(database.engine, "before_cursor_execute", capture)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()[0]["has_image"])
+        self.assertFalse(any("incident_reports.image AS" in sql for sql in statements))
+        image = self.client.get(f"/api/reports/{uploaded['id']}/image")
+        self.assertEqual(image.status_code, 200)
+        self.assertEqual(image.headers["content-type"], "image/jpeg")
+        self.assertEqual(self.other.get(f"/api/reports/{uploaded['id']}/image").status_code, 404)
+
     def test_workspace_isolation_and_anonymous_access(self):
         self.assertEqual(len(self.client.get("/api/assets").json()), 10)
         self.assertEqual(len(self.other.get("/api/assets").json()), 9)

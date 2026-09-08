@@ -91,6 +91,9 @@ also require a valid session cookie. Cross-origin access is not enabled.
 | `GET /api/track/{code}` | Minimal public report status |
 | `GET /api/health` | Database connectivity and application version |
 
+Report summaries load attachment-presence flags and batch asset names; photo bytes
+are loaded only when an authorized user opens the attachment.
+
 Uploads accept actual JPEG, PNG, or WebP images up to 3 MB. Images are decoded,
 validated, resized, and re-encoded as JPEG without original metadata. A submitted
 photo is retained for human review; the application does **not** diagnose cracks

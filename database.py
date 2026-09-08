@@ -16,7 +16,7 @@ from sqlalchemy import (
     create_engine,
     event,
 )
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.orm import column_property, declarative_base, deferred, relationship, sessionmaker
 from sqlalchemy.pool import NullPool
 
 
@@ -100,6 +100,9 @@ class Report(Base):
     status = Column(String(16), default="Open", nullable=False)
     resolution_note = Column(String(1000))
     image = Column(LargeBinary)
+    has_image = column_property(image.is_not(None))
+    image = deferred(image)
+    asset = relationship(Asset)
     created_at = Column(DateTime, default=utcnow, nullable=False)
     resolved_at = Column(DateTime)
 
