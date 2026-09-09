@@ -44,6 +44,20 @@ legacy `structiq.db` file in the repository is retained as an original example;
 the current app does not load or modify it. To use PostgreSQL instead, set
 `DATABASE_URL` to a connection string. Both databases use the same application.
 
+## Check a local installation
+
+With the server running, check the app's database connection:
+
+```sh
+curl --fail --silent --show-error http://127.0.0.1:8000/api/health
+```
+
+The response should include `"status": "ok"` and `"database": "sqlite"` for the
+default local setup, or `"database": "postgresql"` when configured to use it.
+This endpoint executes a database query; it does not verify every workflow.
+For a manual persistence check, launch a private demo, add an asset, and reload
+the dashboard in the same browser session to confirm the asset remains.
+
 ## Deploy to Vercel
 
 1. Import this GitHub repository and choose the **FastAPI** framework preset.
