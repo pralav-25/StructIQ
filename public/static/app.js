@@ -7,6 +7,7 @@ import {
   initials,
   severityName,
 } from "./utils.js";
+import { filterReports, reportsCsv } from "./reports.js";
 
 const $ = (selector, parent = document) => parent.querySelector(selector);
 const root = $("#root"),
@@ -20,6 +21,9 @@ const state = {
   view: "overview",
   archived: false,
   reportFilter: "Open",
+  reportQuery: "",
+  reportSeverity: "",
+  reportSort: "newest",
 };
 let map,
   toastTimer,
@@ -329,6 +333,10 @@ function renderShell() {
     try {
       await api("/auth/logout", { method: "POST" });
       state.account = null;
+      state.reportQuery = "";
+      state.reportSeverity = "";
+      state.reportSort = "newest";
+      state.reportFilter = "Open";
       history.pushState({}, "", "/");
       landing();
     } catch (e) {
@@ -994,12 +1002,7 @@ function reportsView() {
       "Incident reports",
       "Track observations from submission through to documented resolution.",
       [
-        button(
-          "Share reporting link",
-          shareReporting,
-          "button secondary",
-          "share",
-        ),
+        button("Share reporting link", shareReporting, "button secondary", "share"),
         button("Submit report", () => reportForm(), "button", "plus"),
       ],
     ),
@@ -1012,75 +1015,134 @@ function reportsView() {
     ["Open", "Open reports"],
     ["Resolved", "Resolved"],
     ["", "All history"],
-  ])
-    tabs.append(
-      button(
-        label,
-        () => {
-          state.reportFilter = value;
-          renderShell();
-        },
-        state.reportFilter === value ? "active" : "",
-      ),
+  ]) {
+    const tab = button(
+      label,
+      () => {
+        state.reportFilter = value;
+        renderShell();
+      },
+      state.reportFilter === value ? "active" : "",
     );
-  content.append(el("div", { class: "toolbar" }, tabs));
-  const items = state.reports.filter(
-      (r) => !state.reportFilter || r.status === state.reportFilter,
-    ),
-    grid = el("div", { class: "report-grid" });
-  for (const r of items) {
-    const card = el("article", { class: "report-card" }, [
-      el("div", { class: "row between" }, [
-        el(
-          "span",
-          { class: "small muted" },
-          `REPORT #${r.id} · ${date(r.created_at)}`,
-        ),
-        badge(
-          r.status === "Resolved" ? "Resolved" : severityName(r.severity),
-          r.status === "Resolved"
-            ? ""
-            : r.severity === 15
-              ? "emergency"
-              : r.severity === 10
-                ? "high"
-                : "",
-        ),
-      ]),
-      el("h3", {}, r.asset_name),
-      el("p", {}, r.description),
-      r.resolution_note
-        ? el("div", { class: "resolution" }, [
-            el("strong", {}, "Resolution: "),
-            r.resolution_note,
-          ])
-        : null,
-      el("div", { class: "report-bottom" }, [
-        button(
-          r.has_image ? "View details & photo" : "View details",
-          () => reportDetail(r),
-          "text-button",
-        ),
-        r.status === "Open"
-          ? button(
-              "Resolve report",
-              () => resolveDialog(r),
-              "button secondary slim",
-              "check",
-            )
-          : el("span", { class: "small muted" }, date(r.resolved_at)),
-      ]),
-    ]);
-    grid.append(card);
+    tab.setAttribute("aria-pressed", String(state.reportFilter === value));
+    tabs.append(tab);
   }
-  content.append(
-    items.length
-      ? grid
-      : el("div", { class: "panel empty" }, [
-          el("strong", {}, "No reports in this view"),
-          "Submit an observation to begin the workflow, or choose a different status filter.",
-        ]),
+  const visible = () =>
+    filterReports(state.reports, {
+      query: state.reportQuery,
+      status: state.reportFilter,
+      severity: state.reportSeverity,
+      sort: state.reportSort,
+    });
+  const exportButton = button(
+    "Export visible CSV",
+    () => {
+      const rows = visible();
+      if (!rows.length) return;
+      const url = URL.createObjectURL(
+        new Blob([reportsCsv(rows)], { type: "text/csv;charset=utf-8" }),
+      );
+      const link = el("a", { href: url, download: "structiq-incident-reports.csv" });
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      toast(`Exported ${rows.length} visible report${rows.length === 1 ? "" : "s"}.`);
+    },
+    "button secondary slim",
+    "download",
   );
+  content.append(el("div", { class: "toolbar" }, [tabs, exportButton]));
+  const filters = el("div", { class: "report-filters" });
+  filters.innerHTML = `<div><label for="report-query">Search reports</label><input id="report-query" type="search" placeholder="Asset, report ID, description, or resolution"></div><div><label for="report-severity">Observed priority</label><select id="report-severity"><option value="">All priorities</option><option value="15">High</option><option value="10">Medium</option><option value="5">Low</option></select></div><div><label for="report-sort">Sort reports</label><select id="report-sort"><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="priority">Highest priority first</option></select></div>`;
+  const search = $("input", filters);
+  const [severity, sort] = filters.querySelectorAll("select");
+  search.value = state.reportQuery;
+  severity.value = state.reportSeverity;
+  sort.value = state.reportSort;
+  const count = el("p", { class: "small muted", role: "status", style: "margin:0" });
+  const reset = button(
+    "Clear filters",
+    () => {
+      state.reportFilter = "";
+      state.reportQuery = "";
+      state.reportSeverity = "";
+      state.reportSort = "newest";
+      renderShell();
+      $(".report-filters input").focus();
+    },
+    "text-button",
+  );
+  const area = el("div");
+  content.append(filters, el("div", { class: "row between report-results" }, [count, reset]), area);
+  function renderResults() {
+    const items = visible();
+    count.textContent = `${items.length} of ${state.reports.length} reports shown`;
+    exportButton.disabled = items.length === 0;
+    reset.disabled =
+      !state.reportQuery &&
+      !state.reportSeverity &&
+      !state.reportFilter &&
+      state.reportSort === "newest";
+    const grid = el("div", { class: "report-grid" });
+    for (const r of items) {
+      const card = el("article", { class: "report-card" }, [
+        el("div", { class: "row between" }, [
+          el("span", { class: "small muted" }, `REPORT #${r.id} · ${date(r.created_at)}`),
+          badge(
+            r.status === "Resolved" ? "Resolved" : severityName(r.severity),
+            r.status === "Resolved"
+              ? ""
+              : r.severity === 15
+                ? "emergency"
+                : r.severity === 10
+                  ? "high"
+                  : "",
+          ),
+        ]),
+        el("h3", {}, r.asset_name),
+        el("p", {}, r.description),
+        r.resolution_note
+          ? el("div", { class: "resolution" }, [
+              el("strong", {}, "Resolution: "),
+              r.resolution_note,
+            ])
+          : null,
+        el("div", { class: "report-bottom" }, [
+          button(
+            r.has_image ? "View details & photo" : "View details",
+            () => reportDetail(r),
+            "text-button",
+          ),
+          r.status === "Open"
+            ? button("Resolve report", () => resolveDialog(r), "button secondary slim", "check")
+            : el("span", { class: "small muted" }, date(r.resolved_at)),
+        ]),
+      ]);
+      grid.append(card);
+    }
+    area.replaceChildren(
+      items.length
+        ? grid
+        : el("div", { class: "panel empty" }, [
+            el("strong", {}, "No reports in this view"),
+            "Try another search, priority, or status, or clear the filters to see all reports.",
+          ]),
+    );
+  }
+  search.oninput = () => {
+    state.reportQuery = search.value;
+    renderResults();
+  };
+  severity.onchange = () => {
+    state.reportSeverity = severity.value;
+    renderResults();
+  };
+  sort.onchange = () => {
+    state.reportSort = sort.value;
+    renderResults();
+  };
+  renderResults();
 }
 function resolveDialog(report) {
   noteDialog(

@@ -15,6 +15,8 @@ demonstration, not a structural-safety assessment service.
 - Submit an incident with a manually selected priority and optional photo.
 - Share a public reporting link without granting dashboard access.
 - Track a submitted report through an unguessable status link.
+- Triage incidents with search across asset names, report IDs, descriptions, and resolution notes; combine status and observed-priority filters, then sort by recency or priority.
+- Export just the visible incident reports as spreadsheet-safe CSV, in the displayed order. Tracking codes and photo data are excluded; the file contains the descriptions and notes already visible in your private workspace.
 - Record maintenance and resolve incidents with notes; keep the complete history.
 - Enable and clear a reversible flood scenario for road assets.
 - Use the same application on desktop and mobile.
