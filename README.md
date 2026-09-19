@@ -107,6 +107,8 @@ also require a valid session cookie. Cross-origin access is not enabled.
 
 Report summaries load attachment-presence flags and batch asset names; photo bytes
 are loaded only when an authorized user opens the attachment.
+Asset lists and CSV exports batch open-report severity totals, so their database
+query count stays constant as the asset register grows.
 
 Uploads accept actual JPEG, PNG, or WebP images up to 3 MB. Images are decoded,
 validated, resized, and re-encoded as JPEG without original metadata. A submitted
