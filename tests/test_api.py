@@ -316,6 +316,73 @@ class ApiTests(unittest.TestCase):
         self.assertTrue(rows[-1][1].startswith("'="))
         self.assertNotIn(self.other_account["share_token"], response.text)
 
+    def test_asset_list_and_export_query_counts_do_not_grow_with_register(self):
+        from sqlalchemy import event
+
+        def query_count(endpoint):
+            statements = []
+
+            def capture(_conn, _cursor, statement, _params, _context, _many):
+                if statement.lstrip().upper().startswith("SELECT"):
+                    statements.append(statement)
+
+            event.listen(database.engine, "before_cursor_execute", capture)
+            try:
+                response = self.client.get(endpoint)
+            finally:
+                event.remove(database.engine, "before_cursor_execute", capture)
+            self.assertEqual(response.status_code, 200, response.text)
+            return len(statements)
+
+        endpoints = ["/api/assets", "/api/export"]
+        before = {endpoint: query_count(endpoint) for endpoint in endpoints}
+        for index in range(12):
+            response = self.client.post(
+                "/api/assets", json={**ASSET, "name": f"Additional bridge {index}"}
+            )
+            self.assertEqual(response.status_code, 201, response.text)
+        for endpoint in endpoints:
+            with self.subTest(endpoint=endpoint):
+                self.assertEqual(query_count(endpoint), before[endpoint])
+
+    def test_batched_scores_preserve_report_status_flood_and_workspace_scope(self):
+        road = self.client.post(
+            "/api/assets", json={**ASSET, "asset_type": "Road", "construction_year": 2025}
+        ).json()
+        self.upload(severity="5")
+        resolved = self.upload(severity="15").json()
+        self.client.post(
+            f"/api/reports/{resolved['id']}/resolve", json={"note": "Inspected and repaired"}
+        )
+        self.upload(asset_id=road["id"], severity="10")
+        other_asset = self.other.get("/api/assets").json()[0]
+        response = self.other.post(
+            "/api/reports",
+            data={
+                "asset_id": other_asset["id"],
+                "description": "Observation in a separate workspace",
+                "severity": "15",
+            },
+        )
+        self.assertEqual(response.status_code, 201, response.text)
+        self.client.post("/api/scenarios/flood", json={"active": True})
+
+        listed = {asset["id"]: asset for asset in self.client.get("/api/assets").json()}
+        self.assertNotIn(other_asset["id"], listed)
+        self.assertEqual(listed[self.asset["id"]]["health_score"], self.asset["health_score"] - 7.5)
+        self.assertEqual(listed[road["id"]]["health_score"], max(0, road["health_score"] - 30))
+        for asset in listed.values():
+            if asset["id"] not in {self.asset["id"], road["id"]}:
+                flood = 15 if asset["asset_type"] == "Road" else 0
+                self.assertEqual(asset["health_score"], max(0, asset["condition_score"] - flood))
+
+        exported = list(csv.DictReader(io.StringIO(self.client.get("/api/export").text)))
+        self.assertEqual({int(row["ID"]) for row in exported}, set(listed))
+        for row in exported:
+            asset = listed[int(row["ID"])]
+            self.assertEqual(float(row["Demo health score"]), asset["health_score"])
+            self.assertEqual(row["Priority"], asset["maintenance_priority"])
+
     def test_session_revocation_expiry_and_persistence_across_clients(self):
         resumed = TestClient(app, headers=HEADERS)
         resumed.cookies.update(self.client.cookies)
