@@ -65,6 +65,28 @@ class ApiTests(unittest.TestCase):
             a for a in self.client.get("/api/assets").json() if a["id"] == self.asset["id"]
         )["health_score"]
 
+    def test_activity_export_is_private_complete_and_csv_safe(self):
+        with database.SessionLocal() as db:
+            workspace_id = db.get(database.Asset, self.asset["id"]).workspace_id
+            for index in range(105):
+                db.add(database.Activity(
+                    workspace_id=workspace_id,
+                    kind="maintenance",
+                    message='=HYPERLINK("example", "test")' if index == 0 else f"Event {index}",
+                    asset_id=self.asset["id"],
+                ))
+            db.commit()
+        response = self.client.get("/api/activity/export")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("structiq-activity.csv", response.headers["content-disposition"])
+        rows = list(csv.DictReader(io.StringIO(response.text)))
+        self.assertGreater(len(rows), 100)
+        self.assertEqual(rows[0]["Message"], "Event 104")
+        self.assertTrue(any(row["Message"].startswith("'=HYPERLINK") for row in rows))
+        self.assertNotIn("Event 104", self.other.get("/api/activity/export").text)
+        with TestClient(app) as stranger:
+            self.assertEqual(stranger.get("/api/activity/export").status_code, 401)
+
     def test_report_summaries_do_not_load_photo_blobs(self):
         from sqlalchemy import event, inspect
 
