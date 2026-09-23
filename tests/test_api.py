@@ -90,6 +90,47 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(image.headers["content-type"], "image/jpeg")
         self.assertEqual(self.other.get(f"/api/reports/{uploaded['id']}/image").status_code, 404)
 
+    def test_asset_listing_and_export_use_one_scoring_query_for_all_assets(self):
+        from sqlalchemy import event
+
+        self.assertEqual(self.upload(severity="10").status_code, 201)
+        resolved_report = self.upload(severity="15").json()
+        self.client.post(f"/api/reports/{resolved_report['id']}/resolve",
+                         json={"note": "Repair completed"})
+        self.client.post("/api/scenarios/flood", json={"active": True})
+        expected_score = self.asset["health_score"] - 15
+        statements = []
+
+        def capture(_conn, _cursor, statement, _params, _context, _many):
+            if statement.lstrip().upper().startswith("SELECT"):
+                statements.append(statement)
+
+        event.listen(database.engine, "before_cursor_execute", capture)
+        try:
+            listing = self.client.get("/api/assets")
+            listing_count = len(statements)
+            statements.clear()
+            exported = self.client.get("/api/export")
+            export_count = len(statements)
+        finally:
+            event.remove(database.engine, "before_cursor_execute", capture)
+
+        self.assertEqual(listing.status_code, 200)
+        self.assertEqual(exported.status_code, 200)
+        assets = {row["id"]: row for row in listing.json()}
+        self.assertEqual(assets[self.asset["id"]]["health_score"], expected_score)
+        self.assertEqual(len(assets), 10)
+        for asset in assets.values():
+            penalty = 15 if asset["asset_type"] == "Road" or asset["id"] == self.asset["id"] else 0
+            self.assertEqual(asset["health_score"], max(0, asset["condition_score"] - penalty))
+        rows = list(csv.DictReader(io.StringIO(exported.text)))
+        self.assertEqual(len(rows), len(assets))
+        for row in rows:
+            self.assertEqual(float(row["Demo health score"]), assets[int(row["ID"])]["health_score"])
+        # Session, workspace, and the combined asset/score SELECT: no query per asset.
+        self.assertLessEqual(listing_count, 3)
+        self.assertLessEqual(export_count, 3)
+
     def test_workspace_isolation_and_anonymous_access(self):
         self.assertEqual(len(self.client.get("/api/assets").json()), 10)
         self.assertEqual(len(self.other.get("/api/assets").json()), 9)

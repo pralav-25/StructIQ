@@ -174,12 +174,14 @@ def activity(db, account, kind, message, asset=None):
     )
 
 
-def asset_score(db, account, asset):
-    severity = (
-        db.query(func.coalesce(func.sum(dbm.Report.severity), 0))
-        .filter_by(workspace_id=account.id, asset_id=asset.id, status="Open")
-        .scalar()
-    )
+def asset_score(db, account, asset, *, open_severity=None):
+    severity = open_severity
+    if severity is None:
+        severity = (
+            db.query(func.coalesce(func.sum(dbm.Report.severity), 0))
+            .filter_by(workspace_id=account.id, asset_id=asset.id, status="Open")
+            .scalar()
+        )
     flood = 15 if account.flood_active and asset.asset_type == "Road" else 0
     return round(max(0.0, asset.condition_score - severity * 1.5 - flood), 1)
 
@@ -196,8 +198,8 @@ def owned_asset(db, account, asset_id, include_archived=False):
     return asset
 
 
-def asset_data(db, account, asset):
-    score = asset_score(db, account, asset)
+def asset_data(db, account, asset, *, open_severity=None):
+    score = asset_score(db, account, asset, open_severity=open_severity)
     return {
         "id": asset.id,
         "name": asset.name,
@@ -213,6 +215,23 @@ def asset_data(db, account, asset):
         "last_service_at": iso(asset.last_service_at),
         "created_at": iso(asset.created_at),
     }
+
+
+def scored_assets(db, account, archived=False):
+    """Fetch a workspace's assets and open-report penalties in one query."""
+    severities = (
+        db.query(dbm.Report.asset_id, func.sum(dbm.Report.severity).label("severity"))
+        .filter_by(workspace_id=account.id, status="Open")
+        .group_by(dbm.Report.asset_id)
+        .subquery()
+    )
+    rows = (
+        db.query(dbm.Asset, func.coalesce(severities.c.severity, 0))
+        .outerjoin(severities, severities.c.asset_id == dbm.Asset.id)
+        .filter(dbm.Asset.workspace_id == account.id, dbm.Asset.archived == archived)
+        .order_by(dbm.Asset.id)
+    )
+    return [asset_data(db, account, asset, open_severity=severity) for asset, severity in rows]
 
 
 def iso(value):
@@ -316,12 +335,7 @@ def logout(request: Request, db: Session = Depends(get_db)):
 @app.get("/assets", include_in_schema=False)
 @app.get("/api/assets")
 def assets(archived: bool = False, account=Depends(workspace), db: Session = Depends(get_db)):
-    return [
-        asset_data(db, account, a)
-        for a in db.query(dbm.Asset)
-        .filter_by(workspace_id=account.id, archived=archived)
-        .order_by(dbm.Asset.id)
-    ]
+    return scored_assets(db, account, archived)
 
 
 @app.post("/assets", include_in_schema=False)
@@ -648,19 +662,18 @@ def export(account=Depends(workspace), db: Session = Depends(get_db)):
             "Last maintenance",
         ]
     )
-    for asset in db.query(dbm.Asset).filter_by(workspace_id=account.id, archived=False):
-        data = asset_data(db, account, asset)
-        name = asset.name
+    for data in scored_assets(db, account):
+        name = data["name"]
         if name.lstrip().startswith(("=", "+", "-", "@")) or name.startswith(("\t", "\r", "\n")):
             name = "'" + name
         writer.writerow(
             [
-                asset.id,
+                data["id"],
                 name,
-                asset.asset_type,
-                asset.construction_year,
-                asset.latitude,
-                asset.longitude,
+                data["asset_type"],
+                data["construction_year"],
+                data["latitude"],
+                data["longitude"],
                 data["health_score"],
                 data["maintenance_priority"],
                 data["last_service_at"] or "",
