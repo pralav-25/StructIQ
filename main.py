@@ -50,22 +50,28 @@ app = FastAPI(
 
 @app.middleware("http")
 async def protect_requests(request: Request, call_next):
+    response = None
     if request.method not in {"GET", "HEAD", "OPTIONS"}:
         if request.headers.get("x-requested-with") != "StructIQ":
-            return JSONResponse(
+            response = JSONResponse(
                 {"detail": "Use the StructIQ application to submit this request."}, status_code=403
             )
-        length = request.headers.get("content-length")
-        if length and (not length.isdigit() or int(length) > MAX_UPLOAD + 65536):
-            return JSONResponse(
-                {"detail": "Request exceeds the 3 MB upload limit."}, status_code=413
-            )
-    response = await call_next(request)
+        else:
+            length = request.headers.get("content-length")
+            if length and (not length.isdigit() or int(length) > MAX_UPLOAD + 65536):
+                response = JSONResponse(
+                    {"detail": "Request exceeds the 3 MB upload limit."}, status_code=413
+                )
+    if response is None:
+        response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "same-origin"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(self)"
-    if request.url.path.startswith("/api/"):
+    path = request.url.path
+    if path.startswith(("/api/", "/assets/", "/reports/")) or path in {
+        "/assets", "/reports", "/setup-demo"
+    }:
         response.headers["Cache-Control"] = "no-store"
     return response
 

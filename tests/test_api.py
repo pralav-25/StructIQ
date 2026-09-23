@@ -147,6 +147,29 @@ class ApiTests(unittest.TestCase):
             response = self.other.post("/api/auth/demo")
             self.assertIn("Secure", response.headers["set-cookie"])
 
+    def test_rejected_requests_keep_security_and_no_store_headers(self):
+        with TestClient(app) as anonymous:
+            responses = [
+                anonymous.post("/api/assets", json=ASSET),
+                self.client.post("/api/assets", json=ASSET,
+                                 headers={"Content-Length": str(4 * 1024 * 1024)}),
+            ]
+        self.assertEqual([response.status_code for response in responses], [403, 413])
+        for response in responses:
+            self.assertEqual(response.headers.get("cache-control"), "no-store")
+            self.assertEqual(response.headers.get("x-content-type-options"), "nosniff")
+            self.assertEqual(response.headers.get("x-frame-options"), "DENY")
+
+    def test_private_legacy_routes_are_never_cacheable(self):
+        for path in ["/assets", "/reports"]:
+            response = self.client.get(path)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.headers.get("cache-control"), "no-store")
+            with TestClient(app) as anonymous:
+                denied = anonymous.get(path)
+            self.assertEqual(denied.status_code, 401)
+            self.assertEqual(denied.headers.get("cache-control"), "no-store")
+
     def test_resolution_preserves_history_and_never_inflates_score(self):
         response = self.upload()
         self.assertEqual(response.status_code, 201, response.text)
