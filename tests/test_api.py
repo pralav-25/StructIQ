@@ -365,6 +365,35 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 429)
         self.assertIn("retry-after", response.headers)
 
+    def test_rate_limit_retry_after_matches_the_remaining_utc_window(self):
+        from datetime import UTC, datetime, timedelta
+
+        from fastapi import HTTPException, Request
+
+        from main import limited
+
+        request = Request({"type": "http", "client": ("retry-test", 1234), "headers": []})
+        for second, microsecond, expected in [(0, 0, 60), (12, 250000, 48), (59, 400000, 1)]:
+            now = datetime(2030, 1, 1, 12, 34, second, microsecond)
+            action = f"retry-{second}"
+            with self.subTest(second=second), database.SessionLocal() as db:
+                with patch("main.dbm.utcnow", return_value=now):
+                    limited(request, db, action, 1, 60)
+                    with self.assertRaises(HTTPException) as raised:
+                        limited(request, db, action, 1, 60)
+                self.assertEqual(raised.exception.status_code, 429)
+                self.assertEqual(raised.exception.headers["Retry-After"], str(expected))
+                row = db.query(database.RequestLimit).filter(
+                    database.RequestLimit.key.like(f"{action}:%")
+                ).one()
+                self.assertEqual(
+                    int(row.key.rsplit(":", 1)[1]),
+                    int(now.replace(tzinfo=UTC).timestamp()) // 60,
+                )
+                next_window = now.replace(second=0, microsecond=0) + timedelta(minutes=1)
+                with patch("main.dbm.utcnow", return_value=next_window):
+                    limited(request, db, action, 1, 60)
+
     def test_expired_demo_is_inaccessible_and_cleaned_up(self):
         from datetime import timedelta
 

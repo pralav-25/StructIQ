@@ -6,7 +6,8 @@ import os
 import secrets
 import warnings
 from contextlib import asynccontextmanager
-from datetime import timedelta
+from datetime import UTC, timedelta
+from math import ceil
 from pathlib import Path
 from typing import Literal
 
@@ -105,7 +106,8 @@ def limited(request, db, action, maximum, seconds=3600):
     if os.getenv("VERCEL"):
         address = request.headers.get("x-vercel-forwarded-for", address).split(",")[0].strip()
     now = dbm.utcnow()
-    bucket = int(now.timestamp()) // seconds
+    timestamp = now.replace(tzinfo=UTC).timestamp()
+    bucket = int(timestamp) // seconds
     key = f"{action}:{token_hash(address)[:32]}:{bucket}"
     insert_module = __import__(f"sqlalchemy.dialects.{db.bind.dialect.name}", fromlist=["insert"])
     statement = insert_module.insert(dbm.RequestLimit).values(
@@ -118,8 +120,10 @@ def limited(request, db, action, maximum, seconds=3600):
     db.query(dbm.RequestLimit).filter(dbm.RequestLimit.expires_at < now).delete()
     db.commit()
     if count > maximum:
+        retry_after = ceil((bucket + 1) * seconds - timestamp)
         raise HTTPException(
-            429, "Too many requests. Please try again later.", headers={"Retry-After": str(seconds)}
+            429, "Too many requests. Please try again later.",
+            headers={"Retry-After": str(retry_after)},
         )
 
 
