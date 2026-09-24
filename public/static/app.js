@@ -1186,7 +1186,14 @@ function activityView() {
     heading(
       "Activity log",
       "A persistent record of registrations, reports, maintenance, and scenarios.",
-      [button("Refresh", loadWorkspace, "button secondary", "clock")],
+      [
+        button("Refresh", loadWorkspace, "button secondary", "clock"),
+        el("a", {
+          class: "button secondary",
+          href: "/api/activity/export",
+          download: "structiq-activity.csv",
+        }, "Export full history (CSV)"),
+      ],
     ),
   );
   const section = panel("Workspace timeline", "The 100 most recent events"),

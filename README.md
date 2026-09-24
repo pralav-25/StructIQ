@@ -150,3 +150,11 @@ Built with FastAPI, SQLAlchemy, PostgreSQL/SQLite, Pillow, and browser JavaScrip
 Leaflet 1.9.4 is bundled with its BSD license in `public/static/vendor/`.
 Map tiles use OpenStreetMap with visible attribution. Fonts are loaded from Google
 Fonts; the interface falls back to system sans-serif if they are unavailable.
+
+### Export audit history
+
+The **Activity log → Export full history (CSV)** action downloads every event in
+the signed-in workspace, newest first. The timeline still shows the latest 100.
+The authenticated `GET /api/activity/export` route includes event type, message,
+asset ID, demonstration health score, and timestamp. CSV quoting preserves
+multiline notes, and formula-like message cells are escaped for spreadsheet use.

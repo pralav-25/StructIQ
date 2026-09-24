@@ -427,6 +427,32 @@ def events(account=Depends(workspace), db: Session = Depends(get_db)):
     ]
 
 
+@app.get("/api/activity/export")
+def export_activity(account=Depends(workspace), db: Session = Depends(get_db)):
+    """Export the complete audit history of the authenticated workspace."""
+    stream = io.StringIO()
+    writer = csv.writer(stream)
+    writer.writerow(["ID", "Kind", "Message", "Asset ID", "Demo health score", "Created at"])
+    rows = (
+        db.query(dbm.Activity)
+        .filter_by(workspace_id=account.id)
+        .order_by(dbm.Activity.id.desc())
+        .yield_per(500)
+    )
+    for row in rows:
+        message = row.message
+        if message.lstrip().startswith(("=", "+", "-", "@")) or message.startswith(("\t", "\r", "\n")):
+            message = "'" + message
+        writer.writerow(
+            [row.id, row.kind, message, row.asset_id, row.health_score, iso(row.created_at)]
+        )
+    return Response(
+        stream.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="structiq-activity.csv"'},
+    )
+
+
 @app.get("/reports", include_in_schema=False)
 @app.get("/api/reports")
 def reports(
