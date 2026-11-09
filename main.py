@@ -4,7 +4,6 @@ import csv
 import io
 import os
 import secrets
-import warnings
 from contextlib import asynccontextmanager
 from datetime import UTC, timedelta
 from math import ceil
@@ -14,7 +13,6 @@ from typing import Literal
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
-from PIL import Image, ImageOps, UnidentifiedImageError
 from sqlalchemy import func, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
@@ -24,11 +22,10 @@ from schemas import ArchiveState, AssetCreate, Credentials, Note, Registration, 
 from scoring import calculate_health, maintenance_priority
 from security import check_password, hash_password, token_hash
 from seed import seed_workspace
+from uploads import MAX_UPLOAD, verified_image
 
 ROOT = Path(__file__).parent
 COOKIE = "structiq_session"
-MAX_UPLOAD = 3 * 1024 * 1024
-Image.MAX_IMAGE_PIXELS = 16_000_000
 DUMMY_PASSWORD = hash_password(secrets.token_urlsafe(20))
 
 
@@ -442,44 +439,6 @@ def reports(
     if status:
         query = query.filter_by(status=status)
     return [report_data(db, r) for r in query.order_by(dbm.Report.id.desc())]
-
-
-async def verified_image(file):
-    if not file or not file.filename:
-        return None
-    try:
-        if file.content_type not in {"image/jpeg", "image/png", "image/webp"}:
-            raise HTTPException(415, "Attach a JPEG, PNG, or WebP image.")
-        content = await file.read(MAX_UPLOAD + 1)
-        if not content:
-            raise HTTPException(422, "The image is empty.")
-        if len(content) > MAX_UPLOAD:
-            raise HTTPException(413, "Image exceeds the 3 MB limit.")
-        with warnings.catch_warnings():
-            warnings.simplefilter("error", Image.DecompressionBombWarning)
-            with Image.open(io.BytesIO(content)) as source:
-                if source.format not in {"JPEG", "PNG", "WEBP"}:
-                    raise HTTPException(415, "The file is not a supported image.")
-                source.verify()
-            with Image.open(io.BytesIO(content)) as source:
-                image = ImageOps.exif_transpose(source).convert("RGB")
-                image.thumbnail((1400, 1400))
-                output = io.BytesIO()
-                image.save(output, "JPEG", quality=75, optimize=True)
-                result = output.getvalue()
-                if len(result) > 600_000:
-                    raise HTTPException(413, "Please choose a smaller image.")
-                return result
-    except (
-        UnidentifiedImageError,
-        OSError,
-        ValueError,
-        Image.DecompressionBombError,
-        Image.DecompressionBombWarning,
-    ):
-        raise HTTPException(422, "The attachment could not be verified as a valid image.") from None
-    finally:
-        await file.close()
 
 
 async def save_report(account, db, request, asset_id, description, severity, file):

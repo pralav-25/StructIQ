@@ -113,6 +113,10 @@ validated, resized, and re-encoded as JPEG without original metadata. A submitte
 photo is retained for human review; the application does **not** diagnose cracks
 or infer structural condition from images.
 
+Image validation and conversion live in `uploads.py`, shared by private and
+public report submission. Corrupted image content, including PNG checksum
+failures, returns a validation error without creating a report.
+
 The demo score starts from an age heuristic (3 points/year for roads, 0.5 for other
 types); the included examples have explicit illustrative baseline scores. Open
 reports subtract 1.5 times the selected severity (5, 10, or 15). The flood scenario
