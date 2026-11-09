@@ -33,6 +33,13 @@ def photo():
     return buffer.getvalue()
 
 
+def corrupt_photo():
+    content = bytearray(photo())
+    # Keep a recognizable PNG header, but invalidate the IDAT chunk checksum.
+    content[content.index(b"IDAT") + 4] ^= 1
+    return bytes(content)
+
+
 class ApiTests(unittest.TestCase):
     def setUp(self):
         database.Base.metadata.drop_all(database.engine)
@@ -275,6 +282,7 @@ class ApiTests(unittest.TestCase):
             ({"file": ("test.txt", b"text", "text/plain")}, 415),
             ({"file": ("empty.png", b"", "image/png")}, 422),
             ({"file": ("fake.png", b"not an image", "image/png")}, 422),
+            ({"file": ("corrupt.png", corrupt_photo(), "image/png")}, 422),
             ({"file": ("large.png", b"x" * (3 * 1024 * 1024 + 1), "image/png")}, 413),
             ({"severity": "30"}, 422),
         ]:
