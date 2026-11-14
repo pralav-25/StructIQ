@@ -716,18 +716,22 @@ function assetsView() {
   [input, type, risk].forEach((control) =>
     control.addEventListener(control === input ? "input" : "change", update),
   );
-  $("#archive-filter", toolbar).onclick = async () => {
+  const archiveFilter = $("#archive-filter", toolbar);
+  archiveFilter.onclick = async () => {
+    archiveFilter.disabled = true;
+    const archived = !state.archived;
     try {
-      state.archived = !state.archived;
-      currentAssets = state.archived
+      const assets = archived
         ? await api("/assets?archived=true")
         : state.assets;
-      $("#archive-filter").textContent = state.archived
-        ? "Active assets"
-        : "View archived";
+      state.archived = archived;
+      currentAssets = assets;
+      archiveFilter.textContent = archived ? "Active assets" : "View archived";
       update();
     } catch (e) {
       toast(e.message);
+    } finally {
+      archiveFilter.disabled = false;
     }
   };
   content.append(toolbar, area, scenarioBar());
